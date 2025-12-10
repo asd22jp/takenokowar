@@ -2,31 +2,134 @@
 <html>
   <head>
     <meta charset="UTF-8" />
-    <title>KINOKO vs TAKENOKO Online</title>
+    <title>KINOKO vs TAKENOKO: Strategic Command</title>
     <style>
       body {
+        background: #1e1e1e;
+        color: #e0e0e0;
         margin: 0;
         overflow: hidden;
-        background: #222;
-        color: #fff;
-        font-family: sans-serif;
-      }
-      #ui-layer {
-        position: absolute;
-        inset: 0;
-        pointer-events: none;
-      }
-      .panel {
-        pointer-events: auto;
-        background: rgba(0, 0, 0, 0.8);
-        padding: 10px;
-        border: 1px solid #555;
-        border-radius: 4px;
+        font-family: "Segoe UI", sans-serif;
+        user-select: none;
       }
 
-      /* Login Screen */
-      #login-screen {
-        position: absolute;
+      /* Top Bar */
+      #topbar {
+        height: 50px;
+        background: #2d2d2d;
+        border-bottom: 1px solid #444;
+        display: flex;
+        align-items: center;
+        padding: 0 20px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+      }
+      .res-box {
+        display: flex;
+        gap: 15px;
+        font-weight: bold;
+        font-size: 14px;
+        margin-right: 20px;
+        border-right: 1px solid #555;
+        padding-right: 20px;
+      }
+      .res-val {
+        color: #fff;
+      }
+
+      /* Layout */
+      #game-layout {
+        display: flex;
+        height: calc(100vh - 50px);
+      }
+      #sidebar {
+        width: 280px;
+        background: #252525;
+        padding: 15px;
+        display: flex;
+        flex-direction: column;
+        border-right: 1px solid #333;
+      }
+      #map-container {
+        flex: 1;
+        position: relative;
+        overflow: hidden;
+        background: #0d1b2a;
+        cursor: grab;
+      }
+
+      /* SVG Map */
+      #game-svg {
+        width: 100%;
+        height: 100%;
+      }
+      .hex {
+        stroke: #000;
+        stroke-width: 0.5;
+        transition: fill 0.2s;
+      }
+      .hex:hover {
+        stroke: #fff;
+        stroke-width: 2;
+      }
+
+      /* Units */
+      .unit-grp {
+        cursor: pointer;
+        transition: transform 0.2s linear;
+      }
+      .unit-box {
+        width: 24px;
+        height: 16px;
+        stroke: #000;
+        stroke-width: 1;
+      }
+      .unit-icon {
+        font-size: 10px;
+        fill: #fff;
+        text-anchor: middle;
+        pointer-events: none;
+      }
+      .unit-bar {
+        fill: #00e676;
+      }
+
+      /* Highlight */
+      .unit-grp.selected .unit-box {
+        stroke: #fff;
+        stroke-width: 2;
+        filter: drop-shadow(0 0 3px #fff);
+      }
+      .unit-grp.my-control .unit-box {
+        stroke: #ff3333;
+        stroke-width: 2;
+      } /* 担当師団の赤枠 */
+
+      /* Chat & UI */
+      .btn {
+        width: 100%;
+        padding: 10px;
+        background: #444;
+        color: #fff;
+        border: 1px solid #555;
+        margin-bottom: 5px;
+        cursor: pointer;
+      }
+      .btn:hover {
+        background: #555;
+      }
+      #chat-area {
+        flex: 1;
+        overflow-y: auto;
+        border: 1px solid #444;
+        background: #1a1a1a;
+        margin-bottom: 5px;
+        padding: 5px;
+        font-size: 12px;
+      }
+
+      /* Login */
+      #login-modal {
+        position: fixed;
         inset: 0;
         background: #111;
         z-index: 100;
@@ -36,359 +139,423 @@
         justify-content: center;
       }
       input,
-      select,
-      button {
+      select {
         padding: 10px;
         margin: 5px;
-        font-size: 16px;
         background: #333;
         color: #fff;
         border: 1px solid #555;
       }
-      button:hover {
-        background: #555;
-        cursor: pointer;
-      }
-
-      /* HUD */
-      #top-bar {
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 40px;
-        background: #333;
-        display: flex;
-        align-items: center;
-        padding: 0 20px;
-        gap: 20px;
-      }
-      #chat-box {
-        position: absolute;
-        bottom: 10px;
-        left: 10px;
-        width: 300px;
-        height: 200px;
-        display: flex;
-        flex-direction: column;
-      }
-      #chat-msgs {
-        flex: 1;
-        overflow-y: auto;
-        font-size: 12px;
-        margin-bottom: 5px;
-      }
-      #controls {
-        position: absolute;
-        bottom: 10px;
-        right: 10px;
-        display: flex;
-        flex-direction: column;
-        gap: 5px;
-      }
-
-      /* Game Elements */
-      canvas {
-        display: block;
-        cursor: crosshair;
-      }
     </style>
   </head>
   <body>
-    <!-- Login -->
-    <div id="login-screen">
-      <h1>きのこ vs たけのこ ONLINE</h1>
-      <div style="margin-bottom: 20px; color: #aaa">
-        勝利数 - きのこ: <span id="w-kin">0</span> / たけのこ:
-        <span id="w-tak">0</span>
-      </div>
-      <input id="p-name" placeholder="名前" value="Commander" />
+    <div id="login-modal">
+      <h1>きのこたけのこ戦略司令部</h1>
+      <input id="p-name" placeholder="司令官名" value="Commander" />
       <select id="p-faction">
         <option value="KIN">きのこの山帝国</option>
         <option value="TAK">たけのこの里共和国</option>
       </select>
       <select id="p-role">
-        <option value="Supreme">総司令官 (全操作権限)</option>
+        <option value="Supreme">総司令官 (全権限)</option>
         <option value="Production">生産大臣 (徴兵のみ)</option>
-        <option value="Marshal_1">第1師団長 (Div 1)</option>
-        <option value="Marshal_2">第2師団長 (Div 2)</option>
-        <option value="Marshal_3">第3師団長 (Div 3)</option>
-        <option value="Marshal_4">第4師団長 (Div 4)</option>
-        <option value="Marshal_5">第5師団長 (Div 5)</option>
-        <option value="Marshal_6">第6師団長 (Div 6)</option>
+        <option value="Marshal_1">第1師団長</option>
+        <option value="Marshal_2">第2師団長</option>
+        <option value="Marshal_3">第3師団長</option>
+        <option value="Marshal_4">第4師団長</option>
+        <option value="Marshal_5">第5師団長</option>
+        <option value="Marshal_6">第6師団長</option>
       </select>
-      <button onclick="startGame()">参戦</button>
+      <button class="btn" style="width: 200px" onclick="startGame()">
+        入室
+      </button>
     </div>
 
-    <!-- Game UI -->
-    <div id="game-ui" style="display: none">
-      <div id="top-bar">
-        <span id="u-faction" style="font-weight: bold; font-size: 20px"></span>
-        <span id="u-role" style="color: #aaa"></span>
-        <div style="margin-left: auto; display: flex; gap: 15px">
-          <span>政治力: <b id="res-pp">0</b></span>
-          <span>人的: <b id="res-mp">0</b></span>
-          <span>装備: <b id="res-eq">0</b></span>
-        </div>
+    <div id="topbar" style="display: none">
+      <div style="font-size: 24px; margin-right: 15px" id="u-flag">🏳️</div>
+      <div class="res-box">
+        <div>政治力: <span id="res-pp" class="res-val">0</span></div>
+        <div>人的: <span id="res-mp" class="res-val">0</span></div>
+        <div>装備: <span id="res-eq" class="res-val">0</span></div>
       </div>
+      <div
+        style="margin-left: auto; font-weight: bold; color: #aaa"
+        id="u-info"
+      ></div>
+    </div>
 
-      <canvas id="game-canvas"></canvas>
+    <div id="game-layout" style="display: none">
+      <div id="sidebar">
+        <h3 style="margin-top: 0">生産ライン</h3>
+        <button class="btn" onclick="recruit('inf')">
+          歩兵師団 (Cost:100)
+        </button>
+        <button class="btn" onclick="recruit('tank')">
+          戦車師団 (Cost:300)
+        </button>
 
-      <div id="chat-box" class="panel">
-        <div id="chat-msgs"></div>
+        <h3>通信ログ</h3>
+        <div id="chat-area"></div>
         <input
           id="chat-input"
-          placeholder="Enterで送信..."
-          onkeydown="if(event.key==='Enter') sendChat()"
+          style="width: 90%"
+          placeholder="送信..."
+          onkeydown="if(event.key==='Enter')sendChat()"
         />
+
+        <div style="font-size: 11px; color: #888; margin-top: 10px">
+          左クリック: 選択<br />
+          右クリック: 移動<br />
+          右ドラッグ: 戦線指示(複数選択時)
+        </div>
       </div>
 
-      <div id="controls" class="panel">
-        <div style="font-size: 12px; color: #aaa; margin-bottom: 5px">
-          生産 (Production/Supremeのみ)
-        </div>
-        <button onclick="recruit('inf')">歩兵師団 (Cost:100)</button>
-        <button onclick="recruit('tank')">戦車師団 (Cost:300)</button>
-        <div style="margin-top: 10px; font-size: 11px; color: #888">
-          操作: 左クリック選択 / 右ドラッグで戦線・移動<br />
-          自分の担当師団は赤い枠線で表示されます
-        </div>
+      <div id="map-container">
+        <svg id="game-svg">
+          <g id="map-layer"></g>
+          <g id="unit-layer"></g>
+          <g id="ui-layer"></g>
+        </svg>
+        <div
+          id="select-box"
+          style="
+            position: absolute;
+            border: 1px solid #fff;
+            background: rgba(255, 255, 255, 0.2);
+            display: none;
+            pointer-events: none;
+          "
+        ></div>
       </div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
       const socket = io();
-      const canvas = document.getElementById("game-canvas");
-      const ctx = canvas.getContext("2d");
-
-      // State
+      const R = 25; // Hex Radius
       let myInfo = { name: "", faction: "", role: "" };
-      let gameState = { units: [], lines: [] };
-      let selectedUnits = [];
-      let isDrawing = false;
-      let drawPoints = [];
+      let hexData = [];
+      let unitData = [];
+      let selectedUnits = []; // ID list
 
-      // Init
-      function resize() {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-      }
-      window.onresize = resize;
-      resize();
-
-      // --- Network Events ---
-      socket.on("initStats", (stats) => {
-        document.getElementById("w-kin").innerText = stats.kinokoWins;
-        document.getElementById("w-tak").innerText = stats.takenokoWins;
-      });
-
-      socket.on("stateUpdate", (state) => {
-        gameState = state;
-        updateUI();
-      });
-
-      socket.on("chatMessage", ({ user, text }) => {
-        const d = document.createElement("div");
-        d.textContent = `${user}: ${text}`;
-        const box = document.getElementById("chat-msgs");
-        box.appendChild(d);
-        box.scrollTop = box.scrollHeight;
-      });
-
-      socket.on("gameStarted", () => {
-        document.getElementById("login-screen").style.display = "none";
-        document.getElementById("game-ui").style.display = "block";
-        document.getElementById("u-faction").innerText =
-          myInfo.faction === "KIN" ? "きのこの山帝国" : "たけのこの里共和国";
-        document.getElementById("u-role").innerText = "役職: " + myInfo.role;
-        document.getElementById("u-faction").style.color =
-          myInfo.faction === "KIN" ? "#e67e22" : "#27ae60";
-      });
-
-      // --- Controls ---
+      // --- Setup ---
       function startGame() {
         myInfo.name = document.getElementById("p-name").value;
         myInfo.faction = document.getElementById("p-faction").value;
         myInfo.role = document.getElementById("p-role").value;
+
         socket.emit("joinGame", myInfo);
+
+        document.getElementById("login-modal").style.display = "none";
+        document.getElementById("topbar").style.display = "flex";
+        document.getElementById("game-layout").style.display = "flex";
+        document.getElementById("u-flag").innerText =
+          myInfo.faction === "KIN" ? "🍄" : "🎍";
+        document.getElementById(
+          "u-info"
+        ).innerText = `${myInfo.name} [${myInfo.role}]`;
+
+        initInput();
       }
 
-      function sendChat() {
-        const inp = document.getElementById("chat-input");
-        if (inp.value) {
-          socket.emit("chat", inp.value);
-          inp.value = "";
-        }
+      // --- Render Logic ---
+      // Convert Axial(q,r) to Pixel(x,y)
+      function hexToPixel(q, r) {
+        const x = R * 1.5 * q + 50;
+        const y = R * 1.73 * r + 50 + (q % 2 ? R * 0.86 : 0);
+        return { x, y };
       }
 
-      function recruit(type) {
-        if (myInfo.role !== "Production" && myInfo.role !== "Supreme") {
-          alert("権限がありません（生産大臣のみ）");
-          return;
-        }
-        socket.emit("recruit", type);
-      }
+      function renderMap() {
+        const layer = document.getElementById("map-layer");
+        layer.innerHTML = ""; // Full redraw for simplicity (optimize in prod)
 
-      // Input Handling
-      canvas.addEventListener("mousedown", (e) => {
-        if (e.button === 0) {
-          // Select
-          const x = e.clientX,
-            y = e.clientY;
-          // Simple click select
-          const clicked = gameState.units.find(
-            (u) =>
-              Math.hypot(u.x - x, u.y - y) < 20 && u.faction === myInfo.faction
+        hexData.forEach((h) => {
+          const pos = hexToPixel(h.q, h.r);
+          const poly = document.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "polygon"
           );
-          if (clicked) {
-            if (e.shiftKey) selectedUnits.push(clicked.id);
-            else selectedUnits = [clicked.id];
-          } else {
-            if (!e.shiftKey) selectedUnits = [];
-          }
-        } else if (e.button === 2) {
-          // Right Click - Draw Line
-          isDrawing = true;
-          drawPoints = [{ x: e.clientX, y: e.clientY }];
-        }
-      });
 
-      canvas.addEventListener("mousemove", (e) => {
-        if (isDrawing) {
-          drawPoints.push({ x: e.clientX, y: e.clientY });
-        }
-      });
-
-      canvas.addEventListener("mouseup", (e) => {
-        if (e.button === 2 && isDrawing) {
-          isDrawing = false;
-
-          // Check permission
-          const canCommand =
-            myInfo.role === "Supreme" || myInfo.role.startsWith("Marshal");
-
-          if (canCommand) {
-            if (drawPoints.length > 5) {
-              // Line Command
-              socket.emit("drawBattleLine", { points: drawPoints });
-            } else if (selectedUnits.length > 0) {
-              // Point Move
-              socket.emit("moveUnits", {
-                unitIds: selectedUnits,
-                x: e.clientX,
-                y: e.clientY,
-              });
-            }
-          }
-          drawPoints = [];
-        }
-      });
-      canvas.addEventListener("contextmenu", (e) => e.preventDefault());
-
-      // --- Rendering Loop ---
-      function draw() {
-        // BG
-        ctx.fillStyle = "#1e1e1e";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        // Map Decor
-        ctx.strokeStyle = "#333";
-        ctx.beginPath();
-        for (let i = 0; i < canvas.width; i += 100) {
-          ctx.moveTo(i, 0);
-          ctx.lineTo(i, canvas.height);
-        }
-        ctx.stroke();
-
-        // Battle Lines
-        if (gameState.lines) {
-          gameState.lines.forEach((l) => {
-            ctx.beginPath();
-            ctx.strokeStyle = l.faction === "KIN" ? "#e67e22" : "#27ae60";
-            ctx.lineWidth = 3;
-            ctx.setLineDash([5, 5]);
-            l.points.forEach((p, i) => {
-              if (i === 0) ctx.moveTo(p.x, p.y);
-              else ctx.lineTo(p.x, p.y);
-            });
-            ctx.stroke();
-            ctx.setLineDash([]);
-          });
-        }
-
-        // Drawing Line (Client)
-        if (isDrawing) {
-          ctx.beginPath();
-          ctx.strokeStyle = "#fff";
-          ctx.lineWidth = 2;
-          drawPoints.forEach((p, i) => {
-            if (i === 0) ctx.moveTo(p.x, p.y);
-            else ctx.lineTo(p.x, p.y);
-          });
-          ctx.stroke();
-        }
-
-        // Units
-        gameState.units.forEach((u) => {
-          const isMine = u.faction === myInfo.faction;
-          const isMyControl =
-            myInfo.role === "Supreme" || u.assignment === myInfo.role;
-
-          // Draw Unit Box
-          ctx.fillStyle = u.faction === "KIN" ? "#d35400" : "#27ae60";
-          if (selectedUnits.includes(u.id)) ctx.fillStyle = "#fff";
-
-          const size = 20;
-          ctx.fillRect(u.x - size / 2, u.y - size / 1.5, size, size);
-
-          // Red Border for my assigned units
-          if (isMine && isMyControl) {
-            ctx.strokeStyle = "#ff0000";
-            ctx.lineWidth = 2;
-            ctx.strokeRect(
-              u.x - size / 2 - 2,
-              u.y - size / 1.5 - 2,
-              size + 4,
-              size + 4
-            );
+          // Create Hex Points
+          let points = "";
+          for (let i = 0; i < 6; i++) {
+            const angle = (Math.PI / 3) * i;
+            points += `${pos.x + R * Math.cos(angle)},${
+              pos.y + R * Math.sin(angle)
+            } `;
           }
 
-          // Health Bar
-          ctx.fillStyle = "#000";
-          ctx.fillRect(u.x - 10, u.y + 10, 20, 4);
-          ctx.fillStyle = "#0f0";
-          ctx.fillRect(u.x - 10, u.y + 10, 20 * (u.hp / u.maxHp), 4);
+          poly.setAttribute("points", points);
+          poly.setAttribute("class", "hex");
+          // Color by owner
+          poly.setAttribute(
+            "fill",
+            h.owner === "KIN"
+              ? "#5d4037"
+              : h.owner === "TAK"
+              ? "#1b5e20"
+              : "#1c2833"
+          );
+          if (h.owner === "KIN") poly.setAttribute("fill-opacity", "0.4");
+          if (h.owner === "TAK") poly.setAttribute("fill-opacity", "0.4");
 
-          // Icon/Text
-          ctx.fillStyle = "#fff";
-          ctx.font = "10px Arial";
-          ctx.textAlign = "center";
-          ctx.fillText(u.type === "tank" ? "T" : "I", u.x, u.y);
+          poly.dataset.id = h.id;
+          poly.dataset.q = h.q;
+          poly.dataset.r = h.r;
 
-          // Assignment Label (Div Number)
-          if (isMine) {
-            ctx.font = "9px monospace";
-            ctx.fillStyle = "#bbb";
-            // Marshal_1 -> Div 1
-            const shortRole = u.assignment.replace("Marshal_", "Div ");
-            ctx.fillText(shortRole, u.x, u.y - 15);
-          }
+          layer.appendChild(poly);
         });
-
-        requestAnimationFrame(draw);
       }
 
-      function updateUI() {
-        const c = gameState.countries[myInfo.faction];
-        if (c) {
+      function renderUnits() {
+        const layer = document.getElementById("unit-layer");
+        // Simple Diff or Clear
+        layer.innerHTML = "";
+
+        unitData.forEach((u) => {
+          // Interpolate visual position
+          // logic: calculate pixel pos from current q,r and next path step?
+          // For simplicity, just render at current q,r. The server sends `progress` we could use for smooth anim.
+          const start = hexToPixel(u.q, u.r);
+          let x = start.x,
+            y = start.y;
+
+          // Smooth movement if moving
+          if (u.state === "moving" && u.path.length > 0) {
+            const next = u.path[0];
+            const end = hexToPixel(next.q, next.r);
+            x = start.x + (end.x - start.x) * u.progress;
+            y = start.y + (end.y - start.y) * u.progress;
+          }
+
+          const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+          g.setAttribute("class", "unit-grp");
+          if (selectedUnits.includes(u.id)) g.classList.add("selected");
+
+          // Check if I control this unit
+          const isMine = u.faction === myInfo.faction;
+          const isMyRole =
+            myInfo.role === "Supreme" || myInfo.role === u.assignment;
+          if (isMine && isMyRole) g.classList.add("my-control");
+
+          g.setAttribute("transform", `translate(${x},${y})`);
+
+          // SVG Content
+          g.innerHTML = `
+      <rect class="unit-box" x="-12" y="-8" fill="${
+        u.faction === "KIN" ? "#d35400" : "#27ae60"
+      }" />
+      <rect class="unit-bar" x="-10" y="4" width="${
+        20 * (u.hp / u.maxHp)
+      }" height="2" />
+      <text class="unit-icon" y="2">${u.type === "tank" ? "🚜" : "🪖"}</text>
+      <text y="-10" font-size="8" fill="#fff" text-anchor="middle">${u.assignment.replace(
+        "Marshal_",
+        "Div"
+      )}</text>
+    `;
+
+          // Click event for selection
+          g.onmousedown = (e) => {
+            e.stopPropagation();
+            if (e.button === 0 && u.faction === myInfo.faction) {
+              if (!e.shiftKey) selectedUnits = [];
+              if (!selectedUnits.includes(u.id)) selectedUnits.push(u.id);
+              renderUnits();
+            }
+          };
+
+          layer.appendChild(g);
+        });
+      }
+
+      // --- Socket Events ---
+      socket.on("stateUpdate", (data) => {
+        // If map changed, redraw map. Else just units.
+        // For prototype, check length or just redraw map once
+        if (hexData.length === 0) {
+          hexData = data.hexes;
+          renderMap();
+        } else {
+          // Update map colors only
+          data.hexes.forEach((h) => {
+            const existing = hexData.find((old) => old.id === h.id);
+            if (existing && existing.owner !== h.owner) {
+              existing.owner = h.owner;
+              // Find DOM element and update fill
+              const poly = document.querySelector(`.hex[data-id="${h.id}"]`);
+              if (poly) {
+                poly.setAttribute(
+                  "fill",
+                  h.owner === "KIN" ? "#5d4037" : "#1b5e20"
+                );
+                poly.setAttribute("fill-opacity", "0.4");
+              }
+            }
+          });
+        }
+
+        unitData = data.units;
+        renderUnits();
+
+        if (data.countries && data.countries[myInfo.faction]) {
+          const c = data.countries[myInfo.faction];
           document.getElementById("res-pp").innerText = Math.floor(c.pp);
           document.getElementById("res-mp").innerText = Math.floor(c.mp);
           document.getElementById("res-eq").innerText = Math.floor(c.eq);
         }
+      });
+
+      socket.on("chatMessage", (msg) => {
+        const d = document.createElement("div");
+        d.innerHTML = `<span style="color:${msg.color}">${msg.user}:</span> ${msg.text}`;
+        document.getElementById("chat-area").prepend(d);
+      });
+
+      // --- Actions ---
+      function recruit(type) {
+        if (myInfo.role !== "Production" && myInfo.role !== "Supreme")
+          return alert("権限がありません");
+        socket.emit("recruit", type);
       }
 
-      draw();
+      function sendChat() {
+        const i = document.getElementById("chat-input");
+        if (i.value) {
+          socket.emit("chat", i.value);
+          i.value = "";
+        }
+      }
+
+      // --- Input Handling ---
+      function initInput() {
+        const svg = document.getElementById("game-svg");
+        let isDrag = false;
+        let startX = 0,
+          startY = 0;
+        let lineEl = null;
+
+        svg.addEventListener("mousedown", (e) => {
+          if (e.button === 0 && e.target.classList.contains("hex")) {
+            // Clear selection if clicking map
+            if (!e.shiftKey) {
+              selectedUnits = [];
+              renderUnits();
+            }
+          }
+          if (e.button === 2) {
+            isDrag = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            // Visual Line
+            lineEl = document.createElementNS(
+              "http://www.w3.org/2000/svg",
+              "polyline"
+            );
+            lineEl.setAttribute("stroke", "#fff");
+            lineEl.setAttribute("stroke-width", "2");
+            lineEl.setAttribute("fill", "none");
+            lineEl.setAttribute("stroke-dasharray", "5,5");
+            document.getElementById("ui-layer").appendChild(lineEl);
+          }
+        });
+
+        svg.addEventListener("mousemove", (e) => {
+          if (isDrag && lineEl) {
+            const rect = svg.getBoundingClientRect();
+            const points = `${startX - rect.left},${startY - rect.top} ${
+              e.clientX - rect.left
+            },${e.clientY - rect.top}`;
+            lineEl.setAttribute("points", points);
+          }
+        });
+
+        svg.addEventListener("mouseup", (e) => {
+          if (e.button === 0 && !e.shiftKey) {
+            /* Select logic handled on elements */
+          }
+
+          if (e.button === 2 && isDrag) {
+            isDrag = false;
+            if (lineEl) lineEl.remove();
+
+            // Identify Target
+            const rect = svg.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const clickY = e.clientY - rect.top;
+
+            // Find Hex at mouse up
+            // Naive closest point check
+            let closest = null,
+              minD = Infinity;
+            hexData.forEach((h) => {
+              const pos = hexToPixel(h.q, h.r);
+              const d = Math.hypot(pos.x - clickX, pos.y - clickY);
+              if (d < R) {
+                closest = h;
+              }
+            });
+
+            if (closest && selectedUnits.length > 0) {
+              const canCmd =
+                myInfo.role === "Supreme" || myInfo.role.startsWith("Marshal");
+              if (canCmd) {
+                // Simply move to target
+                socket.emit("orderMove", {
+                  unitIds: selectedUnits,
+                  targetQ: closest.q,
+                  targetR: closest.r,
+                });
+
+                // Visual feedback
+                const m = document.createElement("div");
+                m.style.cssText = `position:absolute;left:${e.clientX}px;top:${e.clientY}px;width:10px;height:10px;background:#0f0;border-radius:50%;pointer-events:none;`;
+                document.body.appendChild(m);
+                setTimeout(() => m.remove(), 500);
+              }
+            } else if (
+              Math.hypot(e.clientX - startX, e.clientY - startY) > 50 &&
+              selectedUnits.length > 0
+            ) {
+              // Line Drawn (Frontline command)
+              // Calculate hexes intersected by line (simplified: just start and end for prototype)
+              // Or finding hexes near the line segment
+              // Here: Just pass start/end pixels to server? Or resolve hexes client side.
+              // Let's Resolve Hexes Client Side roughly
+              const targets = [];
+              const x1 = startX - rect.left,
+                y1 = startY - rect.top;
+              const x2 = clickX,
+                y2 = clickY;
+              const steps = 10;
+              for (let i = 0; i <= steps; i++) {
+                const tx = x1 + (x2 - x1) * (i / steps);
+                const ty = y1 + (y2 - y1) * (i / steps);
+                let best = null,
+                  bd = Infinity;
+                hexData.forEach((h) => {
+                  const p = hexToPixel(h.q, h.r);
+                  const d = Math.hypot(p.x - tx, p.y - ty);
+                  if (d < R && !targets.includes(h.id)) {
+                    best = h;
+                  }
+                });
+                if (best) targets.push(best.id);
+              }
+
+              if (targets.length) {
+                socket.emit("orderFrontline", {
+                  unitIds: selectedUnits,
+                  hexIds: targets,
+                });
+              }
+            }
+          }
+        });
+
+        svg.addEventListener("contextmenu", (e) => e.preventDefault());
+      }
     </script>
   </body>
 </html>
