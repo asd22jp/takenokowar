@@ -1,0 +1,14 @@
+{
+  "name": "kinoko-takenoko-war-online",
+  "version": "1.0.0",
+  "description": "Real-time Strategy Game",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "mongoose": "^7.0.3",
+    "socket.io": "^4.6.1"
+  }
+}

@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>KINOKO vs TAKENOKO Online</title>
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+        background: #222;
+        color: #fff;
+        font-family: sans-serif;
+      }
+      #ui-layer {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+      }
+      .panel {
+        pointer-events: auto;
+        background: rgba(0, 0, 0, 0.8);
+        padding: 10px;
+        border: 1px solid #555;
+        border-radius: 4px;
+      }
+
+      /* Login Screen */
+      #login-screen {
+        position: absolute;
+        inset: 0;
+        background: #111;
+        z-index: 100;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+      }
+      input,
+      select,
+      button {
+        padding: 10px;
+        margin: 5px;
+        font-size: 16px;
+        background: #333;
+        color: #fff;
+        border: 1px solid #555;
+      }
+      button:hover {
+        background: #555;
+        cursor: pointer;
+      }
+
+      /* HUD */
+      #top-bar {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 40px;
+        background: #333;
+        display: flex;
+        align-items: center;
+        padding: 0 20px;
+        gap: 20px;
+      }
+      #chat-box {
+        position: absolute;
+        bottom: 10px;
+        left: 10px;
+        width: 300px;
+        height: 200px;
+        display: flex;
+        flex-direction: column;
+      }
+      #chat-msgs {
+        flex: 1;
+        overflow-y: auto;
+        font-size: 12px;
+        margin-bottom: 5px;
+      }
+      #controls {
+        position: absolute;
+        bottom: 10px;
+        right: 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+      }
+
+      /* Game Elements */
+      canvas {
+        display: block;
+        cursor: crosshair;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Login -->
+    <div id="login-screen">
+      <h1>きのこ vs たけのこ ONLINE</h1>
+      <div style="margin-bottom: 20px; color: #aaa">
+        勝利数 - きのこ: <span id="w-kin">0</span> / たけのこ:
+        <span id="w-tak">0</span>
+      </div>
+      <input id="p-name" placeholder="名前" value="Commander" />
+      <select id="p-faction">
+        <option value="KIN">きのこの山帝国</option>
+        <option value="TAK">たけのこの里共和国</option>
+      </select>
+      <select id="p-role">
+        <option value="Supreme">総司令官 (全操作権限)</option>
+        <option value="Production">生産大臣 (徴兵のみ)</option>
+        <option value="Marshal_1">第1師団長 (Div 1)</option>
+        <option value="Marshal_2">第2師団長 (Div 2)</option>
+        <option value="Marshal_3">第3師団長 (Div 3)</option>
+        <option value="Marshal_4">第4師団長 (Div 4)</option>
+        <option value="Marshal_5">第5師団長 (Div 5)</option>
+        <option value="Marshal_6">第6師団長 (Div 6)</option>
+      </select>
+      <button onclick="startGame()">参戦</button>
+    </div>
+
+    <!-- Game UI -->
+    <div id="game-ui" style="display: none">
+      <div id="top-bar">
+        <span id="u-faction" style="font-weight: bold; font-size: 20px"></span>
+        <span id="u-role" style="color: #aaa"></span>
+        <div style="margin-left: auto; display: flex; gap: 15px">
+          <span>政治力: <b id="res-pp">0</b></span>
+          <span>人的: <b id="res-mp">0</b></span>
+          <span>装備: <b id="res-eq">0</b></span>
+        </div>
+      </div>
+
+      <canvas id="game-canvas"></canvas>
+
+      <div id="chat-box" class="panel">
+        <div id="chat-msgs"></div>
+        <input
+          id="chat-input"
+          placeholder="Enterで送信..."
+          onkeydown="if(event.key==='Enter') sendChat()"
+        />
+      </div>
+
+      <div id="controls" class="panel">
+        <div style="font-size: 12px; color: #aaa; margin-bottom: 5px">
+          生産 (Production/Supremeのみ)
+        </div>
+        <button onclick="recruit('inf')">歩兵師団 (Cost:100)</button>
+        <button onclick="recruit('tank')">戦車師団 (Cost:300)</button>
+        <div style="margin-top: 10px; font-size: 11px; color: #888">
+          操作: 左クリック選択 / 右ドラッグで戦線・移動<br />
+          自分の担当師団は赤い枠線で表示されます
+        </div>
+      </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+      const socket = io();
+      const canvas = document.getElementById("game-canvas");
+      const ctx = canvas.getContext("2d");
+
+      // State
+      let myInfo = { name: "", faction: "", role: "" };
+      let gameState = { units: [], lines: [] };
+      let selectedUnits = [];
+      let isDrawing = false;
+      let drawPoints = [];
+
+      // Init
+      function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      }
+      window.onresize = resize;
+      resize();
+
+      // --- Network Events ---
+      socket.on("initStats", (stats) => {
+        document.getElementById("w-kin").innerText = stats.kinokoWins;
+        document.getElementById("w-tak").innerText = stats.takenokoWins;
+      });
+
+      socket.on("stateUpdate", (state) => {
+        gameState = state;
+        updateUI();
+      });
+
+      socket.on("chatMessage", ({ user, text }) => {
+        const d = document.createElement("div");
+        d.textContent = `${user}: ${text}`;
+        const box = document.getElementById("chat-msgs");
+        box.appendChild(d);
+        box.scrollTop = box.scrollHeight;
+      });
+
+      socket.on("gameStarted", () => {
+        document.getElementById("login-screen").style.display = "none";
+        document.getElementById("game-ui").style.display = "block";
+        document.getElementById("u-faction").innerText =
+          myInfo.faction === "KIN" ? "きのこの山帝国" : "たけのこの里共和国";
+        document.getElementById("u-role").innerText = "役職: " + myInfo.role;
+        document.getElementById("u-faction").style.color =
+          myInfo.faction === "KIN" ? "#e67e22" : "#27ae60";
+      });
+
+      // --- Controls ---
+      function startGame() {
+        myInfo.name = document.getElementById("p-name").value;
+        myInfo.faction = document.getElementById("p-faction").value;
+        myInfo.role = document.getElementById("p-role").value;
+        socket.emit("joinGame", myInfo);
+      }
+
+      function sendChat() {
+        const inp = document.getElementById("chat-input");
+        if (inp.value) {
+          socket.emit("chat", inp.value);
+          inp.value = "";
+        }
+      }
+
+      function recruit(type) {
+        if (myInfo.role !== "Production" && myInfo.role !== "Supreme") {
+          alert("権限がありません（生産大臣のみ）");
+          return;
+        }
+        socket.emit("recruit", type);
+      }
+
+      // Input Handling
+      canvas.addEventListener("mousedown", (e) => {
+        if (e.button === 0) {
+          // Select
+          const x = e.clientX,
+            y = e.clientY;
+          // Simple click select
+          const clicked = gameState.units.find(
+            (u) =>
+              Math.hypot(u.x - x, u.y - y) < 20 && u.faction === myInfo.faction
+          );
+          if (clicked) {
+            if (e.shiftKey) selectedUnits.push(clicked.id);
+            else selectedUnits = [clicked.id];
+          } else {
+            if (!e.shiftKey) selectedUnits = [];
+          }
+        } else if (e.button === 2) {
+          // Right Click - Draw Line
+          isDrawing = true;
+          drawPoints = [{ x: e.clientX, y: e.clientY }];
+        }
+      });
+
+      canvas.addEventListener("mousemove", (e) => {
+        if (isDrawing) {
+          drawPoints.push({ x: e.clientX, y: e.clientY });
+        }
+      });
+
+      canvas.addEventListener("mouseup", (e) => {
+        if (e.button === 2 && isDrawing) {
+          isDrawing = false;
+
+          // Check permission
+          const canCommand =
+            myInfo.role === "Supreme" || myInfo.role.startsWith("Marshal");
+
+          if (canCommand) {
+            if (drawPoints.length > 5) {
+              // Line Command
+              socket.emit("drawBattleLine", { points: drawPoints });
+            } else if (selectedUnits.length > 0) {
+              // Point Move
+              socket.emit("moveUnits", {
+                unitIds: selectedUnits,
+                x: e.clientX,
+                y: e.clientY,
+              });
+            }
+          }
+          drawPoints = [];
+        }
+      });
+      canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+
+      // --- Rendering Loop ---
+      function draw() {
+        // BG
+        ctx.fillStyle = "#1e1e1e";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Map Decor
+        ctx.strokeStyle = "#333";
+        ctx.beginPath();
+        for (let i = 0; i < canvas.width; i += 100) {
+          ctx.moveTo(i, 0);
+          ctx.lineTo(i, canvas.height);
+        }
+        ctx.stroke();
+
+        // Battle Lines
+        if (gameState.lines) {
+          gameState.lines.forEach((l) => {
+            ctx.beginPath();
+            ctx.strokeStyle = l.faction === "KIN" ? "#e67e22" : "#27ae60";
+            ctx.lineWidth = 3;
+            ctx.setLineDash([5, 5]);
+            l.points.forEach((p, i) => {
+              if (i === 0) ctx.moveTo(p.x, p.y);
+              else ctx.lineTo(p.x, p.y);
+            });
+            ctx.stroke();
+            ctx.setLineDash([]);
+          });
+        }
+
+        // Drawing Line (Client)
+        if (isDrawing) {
+          ctx.beginPath();
+          ctx.strokeStyle = "#fff";
+          ctx.lineWidth = 2;
+          drawPoints.forEach((p, i) => {
+            if (i === 0) ctx.moveTo(p.x, p.y);
+            else ctx.lineTo(p.x, p.y);
+          });
+          ctx.stroke();
+        }
+
+        // Units
+        gameState.units.forEach((u) => {
+          const isMine = u.faction === myInfo.faction;
+          const isMyControl =
+            myInfo.role === "Supreme" || u.assignment === myInfo.role;
+
+          // Draw Unit Box
+          ctx.fillStyle = u.faction === "KIN" ? "#d35400" : "#27ae60";
+          if (selectedUnits.includes(u.id)) ctx.fillStyle = "#fff";
+
+          const size = 20;
+          ctx.fillRect(u.x - size / 2, u.y - size / 1.5, size, size);
+
+          // Red Border for my assigned units
+          if (isMine && isMyControl) {
+            ctx.strokeStyle = "#ff0000";
+            ctx.lineWidth = 2;
+            ctx.strokeRect(
+              u.x - size / 2 - 2,
+              u.y - size / 1.5 - 2,
+              size + 4,
+              size + 4
+            );
+          }
+
+          // Health Bar
+          ctx.fillStyle = "#000";
+          ctx.fillRect(u.x - 10, u.y + 10, 20, 4);
+          ctx.fillStyle = "#0f0";
+          ctx.fillRect(u.x - 10, u.y + 10, 20 * (u.hp / u.maxHp), 4);
+
+          // Icon/Text
+          ctx.fillStyle = "#fff";
+          ctx.font = "10px Arial";
+          ctx.textAlign = "center";
+          ctx.fillText(u.type === "tank" ? "T" : "I", u.x, u.y);
+
+          // Assignment Label (Div Number)
+          if (isMine) {
+            ctx.font = "9px monospace";
+            ctx.fillStyle = "#bbb";
+            // Marshal_1 -> Div 1
+            const shortRole = u.assignment.replace("Marshal_", "Div ");
+            ctx.fillText(shortRole, u.x, u.y - 15);
+          }
+        });
+
+        requestAnimationFrame(draw);
+      }
+
+      function updateUI() {
+        const c = gameState.countries[myInfo.faction];
+        if (c) {
+          document.getElementById("res-pp").innerText = Math.floor(c.pp);
+          document.getElementById("res-mp").innerText = Math.floor(c.mp);
+          document.getElementById("res-eq").innerText = Math.floor(c.eq);
+        }
+      }
+
+      draw();
+    </script>
+  </body>
+</html>
