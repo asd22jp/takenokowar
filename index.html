@@ -2,9 +2,8 @@
 <html>
   <head>
     <meta charset="UTF-8" />
-    <title>47都道府県決戦</title>
+    <title>47都道府県</title>
     <style>
-      /* 基本設定 */
       body {
         background: #1e1e1e;
         color: #e0e0e0;
@@ -14,7 +13,7 @@
         user-select: none;
       }
 
-      /* トップバー */
+      /* UI Overlay (Keep unchanged) */
       #topbar {
         display: flex;
         height: 50px;
@@ -81,7 +80,6 @@
         text-shadow: 0 0 5px var(--hl);
       }
 
-      /* レイアウト */
       #game-layout {
         display: flex;
         height: calc(100vh - 50px);
@@ -130,7 +128,7 @@
         display: block;
       }
 
-      /* UIパーツ */
+      /* Buttons */
       .btn {
         width: 100%;
         padding: 10px;
@@ -161,7 +159,7 @@
         border-color: #b71c1c;
       }
 
-      /* マップエリア (Canvas対応) */
+      /* Map Area - Hybrid SVG/Canvas */
       #map-wrap {
         flex: 1;
         position: relative;
@@ -180,7 +178,7 @@
         will-change: transform;
         pointer-events: auto;
       }
-      /* ユニット描画用キャンバス（SVGの上に重ねる） */
+      /* Canvas for Units (On top of SVG map) */
       #unit-canvas {
         position: absolute;
         top: 0;
@@ -206,7 +204,7 @@
         stroke: none;
       }
 
-      /* モーダル */
+      /* UI Elements */
       .modal {
         position: fixed;
         inset: 0;
@@ -243,7 +241,7 @@
         background: #1a1a1a;
       }
 
-      /* 国家方針 */
+      /* Focus Tree */
       #focus-canvas {
         width: 1600px;
         height: 1200px;
@@ -293,7 +291,7 @@
         height: 100%;
       }
 
-      /* デザイナー */
+      /* Designer */
       .ds-layout {
         display: flex;
         height: 100%;
@@ -412,7 +410,7 @@
         text-align: center;
       }
 
-      /* その他 */
+      /* Misc */
       #news-feed {
         position: absolute;
         top: 15px;
@@ -613,7 +611,7 @@
         }
       }
 
-      /* スタート画面 */
+      /* Start Screen */
       #start-screen {
         position: fixed;
         inset: 0;
@@ -688,8 +686,10 @@
     </div>
 
     <div id="start-screen">
-      <div class="start-title">47都道府県決戦</div>
-      <div class="start-subtitle">プレイする国家を選択</div>
+      <div class="start-title">47都道府県</div>
+      <div class="start-subtitle">
+        プレイする国家を選択 (Canvas High Performance)
+      </div>
       <div id="country-list" class="country-grid"></div>
     </div>
 
@@ -1564,12 +1564,16 @@
                 this.executeBattlePlan();
               return;
             }
+            // Click detection adapted for Canvas
             const target = e.target;
+            // Check for Hex Click
             if (target.classList.contains("hex")) {
               const h = MapSys.hexes[target.dataset.id];
               if (h) this.onHexClick(e, h);
             } else {
+              // Raycast to find unit on canvas
               const pt = this.screenToWorld(e.clientX, e.clientY);
+              // Find unit near click
               const u = Game.units.find(
                 (u) => Math.abs(u.x - pt.x) < 10 && Math.abs(u.y - pt.y) < 10
               );
@@ -1577,6 +1581,7 @@
                 e.stopPropagation();
                 this.onHexClick(e, u.hex);
               } else {
+                // Fallback: try to find hex under mouse via elementsFromPoint if canvas blocked it
                 const els = document.elementsFromPoint(e.clientX, e.clientY);
                 const hexEl = els.find((el) => el.classList.contains("hex"));
                 if (hexEl) {
@@ -1735,6 +1740,7 @@
         },
         hlUnits: function () {
           $("sel-count").innerText = this.selUnits.length;
+          // Visual feedback handled by canvas render loop
         },
         findPath: function (start, end, unitTag) {
           const q = [{ h: start, cost: 0 }];
@@ -1756,6 +1762,7 @@
             return null;
           };
           while (q.length && limit++ < 500) {
+            // Limit A* depth for performance
             const curEntry = getMinCostNode();
             if (!curEntry) break;
             const cur = curEntry.h;
@@ -1827,18 +1834,29 @@
           ctx.translate(this.x, this.y);
           ctx.scale(this.s, this.s);
 
+          // Batch drawing could be optimized here but canvas is fast enough for thousands
           Game.units.forEach((u) => {
+            // Cull off-screen
+            const sx = u.x * this.s + this.x;
+            const sy = u.y * this.s + this.y;
+            // Rough bounds check (in screen space) logic is complicated with transform,
+            // relying on canvas clipping is usually fine for <10k units
+
             const isSel = Input.selUnits.includes(u);
             const isFighting =
               u.innerEl && u.innerEl.classList.contains("fighting");
+
+            // Unit Box
             ctx.fillStyle = isSel ? "#fff" : "#333";
-            if (isSel) ctx.fillRect(u.x - 12, u.y - 8, 24, 16);
+            if (isSel) ctx.fillRect(u.x - 12, u.y - 8, 24, 16); // Outline
+
             const ownerCol = Game.countries[u.tag]
               ? Game.countries[u.tag].col
               : "#555";
             ctx.fillStyle = ownerCol;
             ctx.fillRect(u.x - 11, u.y - 7, 22, 14);
 
+            // Icon (Simple Text)
             if (this.s > 0.5) {
               ctx.fillStyle = "#fff";
               ctx.font = "10px sans-serif";
@@ -1846,23 +1864,30 @@
               ctx.textBaseline = "middle";
               ctx.fillText(u.icon, u.x, u.y);
             }
+
+            // Health Bar
             const hpW = (u.hp / 100) * 20;
             ctx.fillStyle = "#00e676";
             ctx.fillRect(u.x - 10, u.y + 5, hpW, 2);
+
+            // Org Bar
             const orgW = (u.org / u.maxOrg) * 20;
             ctx.fillStyle = "#ff9100";
             ctx.fillRect(u.x - 10, u.y + 3, orgW, 2);
 
+            // Battle Indicator
             if (isFighting) {
               const offset = Math.sin(Date.now() / 50) * 1.5;
               ctx.fillStyle = "rgba(255, 0, 0, 0.5)";
               ctx.fillRect(u.x - 12 + offset, u.y - 8 + offset, 24, 16);
             }
           });
+
           ctx.restore();
 
-          requestAnimationFrame(() => this.drawUnits());
+          if (Game.running) requestAnimationFrame(() => this.drawUnits());
         },
+        // No-op for old methods
         addUnit: function (u) {},
         updateUnit: function (u) {},
       };
@@ -2088,11 +2113,11 @@
         init: async function () {
           await this.loadMapData();
           Input.init();
-          Renderer.init(); // Fixed: Init canvas before using it in initMap -> update -> drawUnits
           this.initCountries();
           this.initMap();
           UI.showStartScreen();
-          requestAnimationFrame(() => Renderer.drawUnits());
+          Renderer.init();
+          requestAnimationFrame(() => Renderer.drawUnits()); // Start render loop
         },
 
         startGame: function (playerTag) {
@@ -2155,6 +2180,7 @@
             if (c.eq > 100000) c.eq = 100000;
             c.peaceTimer = (c.peaceTimer || 0) + 1;
 
+            // Canvas uses pseudo-elements for 'fighting' class, but logic remains same
             const fighting = this.units.some(
               (u) =>
                 u.tag === tag &&
@@ -2945,7 +2971,6 @@
         },
       };
 
-      // AIロジック（平押し対応版）
       const AI = {
         runCountry: function (tag) {
           const c = Game.countries[tag];
@@ -3006,6 +3031,7 @@
             if (enemyAdj.length > 0) {
               target = enemyAdj[Math.floor(Math.random() * enemyAdj.length)];
             } else if (frontline.length > 0) {
+              // 負荷軽減のため、前線チェックを簡略化（ランダムサンプリング）
               let bestF = null;
               let minD = Infinity;
               for (let i = 0; i < 5; i++) {
