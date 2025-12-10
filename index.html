@@ -2,8 +2,9 @@
 <html>
   <head>
     <meta charset="UTF-8" />
-    <title>47都道府県戦争</title>
+    <title>47都道府県決戦</title>
     <style>
+      /* 基本設定 */
       body {
         background: #1e1e1e;
         color: #e0e0e0;
@@ -12,6 +13,8 @@
         overflow: hidden;
         user-select: none;
       }
+
+      /* トップバー */
       #topbar {
         display: flex;
         height: 50px;
@@ -20,6 +23,8 @@
         align-items: center;
         padding: 0 15px;
         box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+        z-index: 20;
+        position: relative;
       }
       .flag {
         font-size: 28px;
@@ -75,6 +80,8 @@
         color: #fff;
         text-shadow: 0 0 5px var(--hl);
       }
+
+      /* レイアウト */
       #game-layout {
         display: flex;
         height: calc(100vh - 50px);
@@ -122,6 +129,8 @@
       .view.active {
         display: block;
       }
+
+      /* UIパーツ */
       .btn {
         width: 100%;
         padding: 10px;
@@ -151,6 +160,8 @@
         background: linear-gradient(to bottom, #e53935, #c62828);
         border-color: #b71c1c;
       }
+
+      /* マップエリア (Canvas対応) */
       #map-wrap {
         flex: 1;
         position: relative;
@@ -161,87 +172,41 @@
       #game-svg {
         width: 100%;
         height: 100%;
+        position: absolute;
+        top: 0;
+        left: 0;
         overflow: visible;
         transform-origin: 0 0;
         will-change: transform;
+        pointer-events: auto;
       }
+      /* ユニット描画用キャンバス（SVGの上に重ねる） */
+      #unit-canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 5;
+      }
+
       .hex {
         stroke: #000;
         stroke-width: 1;
-        transition: 0.1s;
+        transition: fill 0.2s;
+        vector-effect: non-scaling-stroke;
       }
       .hex:hover {
         stroke: #fff;
-        stroke-width: 3;
+        stroke-width: 2;
       }
       .hex.sea {
         fill: #0d1b2a;
         stroke: none;
       }
-      .unit-grp {
-        cursor: pointer;
-        transition: 0.2s;
-      }
-      .unit-grp:hover {
-        filter: brightness(1.3);
-      }
-      .unit-grp.selected .unit-box {
-        stroke: #fff;
-        stroke-width: 1.5;
-        filter: drop-shadow(0 0 3px #fff);
-      }
-      .unit-box {
-        width: 32px;
-        height: 20px;
-        fill: #333;
-        stroke: #000;
-        stroke-width: 1;
-      }
-      .unit-icon {
-        font-size: 14px;
-        fill: #fff;
-        text-anchor: middle;
-        pointer-events: none;
-      }
-      .unit-bar {
-        fill: #00e676;
-      }
-      .unit-org-bar {
-        fill: #ff9100;
-      }
-      .unit-inner.fighting {
-        animation: shake 0.5s infinite;
-      }
-      @keyframes shake {
-        0% {
-          transform: translate(0, 0);
-        }
-        25% {
-          transform: translate(1px, 1px);
-        }
-        50% {
-          transform: translate(-1px, -1px);
-        }
-        75% {
-          transform: translate(1px, -1px);
-        }
-      }
-      .battle-line {
-        fill: none;
-        stroke: var(--warn);
-        stroke-width: 4;
-        stroke-dasharray: 8 4;
-        stroke-linecap: round;
-        opacity: 0.8;
-        filter: drop-shadow(0 0 3px #000);
-        pointer-events: none;
-        animation: dash 1s linear infinite;
-      }
-      @keyframes dash {
-        to {
-          stroke-dashoffset: -12;
-        }
-      }
+
+      /* モーダル */
       .modal {
         position: fixed;
         inset: 0;
@@ -277,8 +242,10 @@
         position: relative;
         background: #1a1a1a;
       }
+
+      /* 国家方針 */
       #focus-canvas {
-        width: 2000px;
+        width: 1600px;
         height: 1200px;
         position: relative;
         background-image: radial-gradient(#333 1px, transparent 1px);
@@ -318,6 +285,15 @@
         filter: grayscale(1);
         pointer-events: none;
       }
+      .focus-lines-svg {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        width: 100%;
+        height: 100%;
+      }
+
+      /* デザイナー */
       .ds-layout {
         display: flex;
         height: 100%;
@@ -435,6 +411,8 @@
         width: 30px;
         text-align: center;
       }
+
+      /* その他 */
       #news-feed {
         position: absolute;
         top: 15px;
@@ -465,29 +443,7 @@
           transform: translateX(0);
         }
       }
-      .dmg-txt {
-        font-size: 14px;
-        font-weight: 900;
-        stroke: #000;
-        stroke-width: 0.5px;
-        fill: #ff5252;
-        pointer-events: none;
-        animation: floatUp 1s forwards;
-      }
-      .shield-icon {
-        font-size: 12px;
-        animation: floatUp 1s forwards;
-      }
-      @keyframes floatUp {
-        0% {
-          opacity: 1;
-          transform: translate(0, 0);
-        }
-        100% {
-          opacity: 0;
-          transform: translate(0, -25px);
-        }
-      }
+
       :root {
         --hl: #00bcd4;
         --warn: #ffca28;
@@ -598,13 +554,6 @@
         font-weight: bold;
         color: #ddd;
       }
-      .focus-lines-svg {
-        position: absolute;
-        inset: 0;
-        pointer-events: none;
-        width: 100%;
-        height: 100%;
-      }
       .designer-modal-window {
         width: 1000px;
         height: 800px;
@@ -664,27 +613,26 @@
         }
       }
 
-      /* Start Screen Styles */
+      /* スタート画面 */
       #start-screen {
         position: fixed;
         inset: 0;
-        background: rgba(20, 20, 20, 0.95);
-        z-index: 5000;
+        background: #111;
+        z-index: 9000;
         display: none;
         flex-direction: column;
         align-items: center;
         padding: 50px;
       }
       .start-title {
-        font-size: 32px;
+        font-size: 36px;
         font-weight: bold;
         margin-bottom: 10px;
-        text-shadow: 0 0 10px var(--hl);
+        color: var(--hl);
       }
-      .start-desc {
-        font-size: 14px;
+      .start-subtitle {
         color: #aaa;
-        margin-bottom: 30px;
+        margin-bottom: 40px;
       }
       .country-grid {
         display: grid;
@@ -692,50 +640,57 @@
         gap: 15px;
         width: 100%;
         max-width: 1200px;
-        max-height: 70vh;
         overflow-y: auto;
-        padding: 10px;
+        padding-bottom: 50px;
       }
       .country-card {
-        background: #333;
+        background: #222;
         border: 1px solid #444;
         border-radius: 5px;
         padding: 15px;
         cursor: pointer;
         transition: 0.2s;
         display: flex;
+        flex-direction: column;
         align-items: center;
-        gap: 10px;
       }
       .country-card:hover {
-        background: #444;
+        background: #333;
         border-color: var(--hl);
-        transform: translateY(-3px);
+        transform: translateY(-5px);
       }
-      .cc-flag {
-        font-size: 24px;
+      .c-flag {
+        font-size: 40px;
+        margin-bottom: 10px;
       }
-      .cc-name {
+      .c-name {
         font-weight: bold;
-        font-size: 15px;
+        text-align: center;
       }
-      .cc-diff {
+      .c-info {
         font-size: 11px;
         color: #888;
+        margin-top: 5px;
+        text-align: center;
+      }
+      .special-tag {
+        color: var(--warn);
+        font-size: 10px;
+        margin-top: 2px;
+        font-weight: bold;
       }
     </style>
   </head>
   <body>
     <div id="loading-overlay">
       <div class="spinner"></div>
-      <div id="loading-text">Loading GeoJSON Data...</div>
+      <div id="loading-text">Loading Map Data...</div>
     </div>
 
-    <!-- Start Screen -->
     <div id="start-screen">
-      <div class="start-title">都道府県war</div>
-      <div class="start-desc">プレイする都道府県を選択してください。</div>
-      <div id="start-grid" class="country-grid"></div>
+      <div class="start-title">47都道府県決戦</div>
+      <div class="start-subtitle">プレイする国家を選択</div>
+      <div id="country-list" class="country-grid"></div>
     </div>
 
     <div id="select-box"></div>
@@ -791,7 +746,6 @@
           <div class="tab" onclick="UI.tab('army')">軍事</div>
           <div class="tab" onclick="UI.tab('diplo')">外交</div>
         </div>
-
         <div id="v-main" class="view active">
           <div class="sb-profile">
             <div class="sb-portrait-wrapper" id="sb-portrait">?</div>
@@ -801,8 +755,11 @@
             </div>
           </div>
           <button class="btn focus-btn-custom" onclick="UI.openFocusTree()">
-            <span class="focus-caption">国家方針</span><br />
-            <span id="sb-focus-curr" class="focus-name">選択してください</span>
+            <span class="focus-caption">国家方針</span><br /><span
+              id="sb-focus-curr"
+              class="focus-name"
+              >選択してください</span
+            >
             <div class="focus-bar-bg">
               <div id="sb-focus-bar" class="focus-bar-progress"></div>
             </div>
@@ -812,8 +769,8 @@
             style="margin-top: 10px"
             onclick="Game.buildFactory()"
           >
-            <span style="font-size: 16px">工場建設</span><br />
-            <span style="font-size: 11px; font-weight: normal"
+            <span style="font-size: 16px">工場建設</span><br /><span
+              style="font-size: 11px; font-weight: normal"
               >政治力:50, 建設期間:10日</span
             >
           </button>
@@ -824,23 +781,21 @@
             <div>工場数: <span id="res-fac" class="white-val">0</span></div>
           </div>
         </div>
-
         <div id="v-army" class="view">
           <div class="army-template-box">
             <div class="army-tmpl-header">
-              <span>現在の師団テンプレート</span>
-              <span class="edit-link" onclick="UI.openDesigner()">[編集]</span>
+              <span>現在の師団テンプレート</span
+              ><span class="edit-link" onclick="UI.openDesigner()">[編集]</span>
             </div>
             <div id="army-tmpl-stats" class="army-stats-grid"></div>
           </div>
-
           <button class="btn btn-green" onclick="Game.recruit()">
-            <span style="font-size: 16px">師団徴兵</span><br />
-            <span style="font-size: 11px; font-weight: normal" id="recruit-cost"
+            <span style="font-size: 16px">師団徴兵</span><br /><span
+              style="font-size: 11px; font-weight: normal"
+              id="recruit-cost"
               >人的:1000 装備:100</span
             >
           </button>
-
           <div
             style="
               margin-top: 20px;
@@ -859,7 +814,6 @@
             </div>
           </div>
         </div>
-
         <div id="v-diplo" class="view">
           <div id="diplo-msg" class="diplo-placeholder">
             地図上の国を<br />クリックしてください
@@ -905,6 +859,10 @@
       </div>
 
       <div id="map-wrap">
+        <!-- SVG Map for Land -->
+        <svg id="game-svg"></svg>
+        <!-- Canvas for Units (Performance Booster) -->
+        <canvas id="unit-canvas"></canvas>
         <div id="news-feed"></div>
       </div>
     </div>
@@ -912,8 +870,8 @@
     <div id="focus-modal" class="modal">
       <div class="modal-win">
         <div class="modal-head">
-          <span class="modal-title-primary">国家方針ツリー</span>
-          <button
+          <span class="modal-title-primary">国家方針ツリー</span
+          ><button
             class="spd-btn"
             style="font-size: 20px"
             onclick="UI.closeFocusTree()"
@@ -929,15 +887,13 @@
         </div>
       </div>
     </div>
-
     <div id="design-modal" class="modal">
       <div class="modal-win designer-modal-window">
         <div class="modal-head">
           <div style="display: flex; align-items: center; gap: 10px">
             <span style="font-size: 18px; font-weight: bold"
               >師団編成デザイナー</span
-            >
-            <span class="designer-xp-display"
+            ><span class="designer-xp-display"
               >★ <span id="ds-xp">0</span> XP</span
             >
           </div>
@@ -980,7 +936,6 @@
                 <div id="grid-sup" style="display: contents"></div>
               </div>
             </div>
-
             <div class="designer-stats-box">
               <div class="designer-stats-header">予測ステータス</div>
               <div class="stat-grid">
@@ -1021,28 +976,11 @@
                   >
                 </div>
                 <div class="stat-row">
-                  <span>貫通 (Prc)</span
-                  ><span class="stat-val" style="color: #e0e0e0" id="ds-prc"
-                    >0</span
-                  >
-                </div>
-                <div class="stat-row">
-                  <span>組織率 (Org)</span
-                  ><span class="stat-val" style="color: var(--good)" id="ds-org"
-                    >0</span
-                  >
-                </div>
-                <div class="stat-row">
-                  <span>速度 (Km/h)</span
-                  ><span class="stat-val" id="ds-spd">0</span>
-                </div>
-                <div class="stat-row">
                   <span>コスト (IC)</span
                   ><span class="stat-val" id="ds-cost">0</span>
                 </div>
               </div>
             </div>
-
             <button
               class="btn btn-green designer-save-button"
               onclick="Designer.save()"
@@ -1184,18 +1122,6 @@
             cost: 250,
           },
         },
-        Countries: {
-          _SEA: {
-            name: "公海",
-            col: "#1a237e",
-            flag: "",
-            mp: 0,
-            fac: 0,
-            eq: 0,
-            xp: 0,
-          },
-        },
-        // Massive Focus Trees
         FocusTree: {
           GENERIC: [
             {
@@ -1204,7 +1130,7 @@
               y: 50,
               t: "政治的努力",
               d: "政治力+50",
-              cost: 70,
+              cost: 100,
               req: [],
               eff: (c) => {
                 c.pp += 50;
@@ -1216,7 +1142,7 @@
               y: 200,
               t: "産業開発",
               d: "工場+1",
-              cost: 200,
+              cost: 300,
               req: ["gen_pol"],
               eff: (c) => {
                 c.fac++;
@@ -1229,7 +1155,7 @@
               y: 200,
               t: "軍備拡張",
               d: "XP+30, 装備+500",
-              cost: 200,
+              cost: 300,
               req: ["gen_pol"],
               eff: (c) => {
                 c.xp += 30;
@@ -1242,7 +1168,7 @@
               y: 350,
               t: "ドクトリン研究",
               d: "全軍防御+10%",
-              cost: 400,
+              cost: 500,
               req: ["gen_mil"],
               eff: (c) => {
                 c.territoryDefBonus = (c.territoryDefBonus || 0) + 0.1;
@@ -1254,7 +1180,7 @@
               y: 400,
               t: "近隣外交",
               d: "政治力+30",
-              cost: 150,
+              cost: 200,
               req: ["gen_pol"],
               eff: (c) => {
                 c.pp += 30;
@@ -1263,293 +1189,274 @@
           ],
           TOKYO: [
             {
-              id: "tk_start",
+              id: "tok_main",
               x: 400,
               y: 50,
-              t: "首都機能強化",
-              d: "政治力+100",
-              cost: 70,
+              t: "帝都復興計画",
+              d: "政治力+100, 安定度+10%",
+              cost: 100,
               req: [],
               eff: (c) => {
                 c.pp += 100;
+                c.st += 10;
               },
             },
             {
-              id: "tk_metro",
+              id: "tok_mob",
               x: 200,
               y: 200,
-              t: "大都市圏防衛構想",
-              d: "工場+3",
-              cost: 250,
-              req: ["tk_start"],
-              eff: (c) => {
-                c.fac += 3;
-                UI.notify("防衛工場が拡充されました", "success");
-              },
-            },
-            {
-              id: "tk_yama",
-              x: 600,
-              y: 200,
-              t: "山手線要塞化",
-              d: "全軍防御+20%",
-              cost: 250,
-              req: ["tk_start"],
-              eff: (c) => {
-                c.territoryDefBonus = (c.territoryDefBonus || 0) + 0.2;
-              },
-            },
-            {
-              id: "tk_kanto",
-              x: 400,
-              y: 350,
-              t: "関東平野の覇者",
+              t: "総動員体制",
               d: "人的資源+50000",
-              cost: 300,
-              req: ["tk_metro", "tk_yama"],
+              cost: 250,
+              req: ["tok_main"],
               eff: (c) => {
                 c.mp += 50000;
               },
             },
             {
-              id: "tk_exp",
+              id: "tok_def",
+              x: 600,
+              y: 200,
+              t: "首都防衛構想",
+              d: "全軍防御+20%",
+              cost: 300,
+              req: ["tok_main"],
+              eff: (c) => {
+                c.territoryDefBonus = (c.territoryDefBonus || 0) + 0.2;
+              },
+            },
+            {
+              id: "tok_ind",
+              x: 400,
+              y: 350,
+              t: "関東工業地帯",
+              d: "工場+3",
+              cost: 400,
+              req: ["tok_main"],
+              eff: (c) => {
+                c.fac += 3;
+                UI.notify("関東工業地帯の整備により工場が増加", "success");
+              },
+            },
+            {
+              id: "tok_sup",
               x: 400,
               y: 500,
-              t: "全国統一へ",
-              d: "政治力+200, 装備+5000",
-              cost: 400,
-              req: ["tk_kanto"],
+              t: "覇権の確立",
+              d: "政治力+200, 攻撃+10%",
+              cost: 500,
+              req: ["tok_ind"],
               eff: (c) => {
                 c.pp += 200;
-                c.eq += 5000;
+                c.atkBonus = (c.atkBonus || 0) + 0.1;
               },
             },
           ],
           OSAKA: [
             {
-              id: "os_start",
+              id: "osa_main",
               x: 400,
               y: 50,
-              t: "天下の台所",
+              t: "大大阪産業計画",
               d: "工場+2",
-              cost: 70,
+              cost: 150,
               req: [],
               eff: (c) => {
                 c.fac += 2;
               },
             },
             {
-              id: "os_com",
+              id: "osa_eco",
               x: 200,
               y: 200,
-              t: "商魂たくましく",
+              t: "商都の誇り",
               d: "政治力+150",
               cost: 200,
-              req: ["os_start"],
+              req: ["osa_main"],
               eff: (c) => {
                 c.pp += 150;
               },
             },
             {
-              id: "os_joke",
+              id: "osa_mil",
               x: 600,
               y: 200,
-              t: "お笑い外交",
-              d: "安定度+20%, 戦争協力度+10%",
-              cost: 200,
-              req: ["os_start"],
-              eff: (c) => {
-                c.st += 20;
-                c.ws += 10;
-              },
-            },
-            {
-              id: "os_west",
-              x: 400,
-              y: 350,
-              t: "西日本の盟主",
-              d: "全軍攻撃+10%",
+              t: "私設師団",
+              d: "装備+2000, 人的+10000",
               cost: 300,
-              req: ["os_com", "os_joke"],
+              req: ["osa_main"],
               eff: (c) => {
-                c.atkBonus = (c.atkBonus || 0) + 0.1;
-              },
-            },
-            {
-              id: "os_castle",
-              x: 400,
-              y: 500,
-              t: "大阪城再建計画",
-              d: "全軍防御+15%",
-              cost: 350,
-              req: ["os_west"],
-              eff: (c) => {
-                c.territoryDefBonus = (c.territoryDefBonus || 0) + 0.15;
-              },
-            },
-          ],
-          GUNMA: [
-            {
-              id: "gn_start",
-              x: 400,
-              y: 50,
-              t: "未開の地",
-              d: "人的資源+10000",
-              cost: 70,
-              req: [],
-              eff: (c) => {
+                c.eq += 2000;
                 c.mp += 10000;
               },
             },
             {
-              id: "gn_emp",
+              id: "osa_exp",
               x: 400,
-              y: 200,
-              t: "グンマー帝国の宣言",
-              d: "政治力+200, 安定度+100%",
-              cost: 250,
-              req: ["gn_start"],
-              eff: (c) => {
-                c.pp += 200;
-                c.st = 100;
-              },
-            },
-            {
-              id: "gn_horse",
-              x: 200,
               y: 350,
-              t: "赤城山要塞",
-              d: "全軍防御+30%",
-              cost: 300,
-              req: ["gn_emp"],
+              t: "関西経済圏",
+              d: "工場建設速度+50%",
+              cost: 400,
+              req: ["osa_eco", "osa_mil"],
               eff: (c) => {
-                c.territoryDefBonus = (c.territoryDefBonus || 0) + 0.3;
-              },
-            },
-            {
-              id: "gn_hot",
-              x: 600,
-              y: 350,
-              t: "草津の湯",
-              d: "人的資源回復速度UP",
-              cost: 300,
-              req: ["gn_emp"],
-              eff: (c) => {
-                c.recruitablePopBonus = 0.1;
-              },
-            },
-            {
-              id: "gn_world",
-              x: 400,
-              y: 500,
-              t: "世界へ",
-              d: "装備+10000",
-              cost: 500,
-              req: ["gn_horse", "gn_hot"],
-              eff: (c) => {
-                c.eq += 10000;
+                c.factoryBuildSpeedBonus =
+                  (c.factoryBuildSpeedBonus || 0) + 0.5;
               },
             },
           ],
           MIYAGI: [
             {
-              id: "my_start",
+              id: "miy_main",
               x: 400,
               y: 50,
-              t: "独眼竜の再来",
-              d: "全軍攻撃+10%",
-              cost: 70,
+              t: "奥州の覇者",
+              d: "政治力+80, 人的+10000",
+              cost: 120,
               req: [],
               eff: (c) => {
-                c.atkBonus = (c.atkBonus || 0) + 0.1;
+                c.pp += 80;
+                c.mp += 10000;
               },
             },
             {
-              id: "my_date",
+              id: "miy_agri",
               x: 200,
               y: 200,
-              t: "伊達者の精神",
-              d: "政治力+100, XP+50",
-              cost: 200,
-              req: ["my_start"],
+              t: "穀倉地帯の動員",
+              d: "人的資源+30000",
+              cost: 250,
+              req: ["miy_main"],
               eff: (c) => {
-                c.pp += 100;
-                c.xp += 50;
+                c.mp += 30000;
               },
             },
             {
-              id: "my_rice",
+              id: "miy_sen",
               x: 600,
               y: 200,
-              t: "仙台平野の米",
-              d: "人的資源+20000",
-              cost: 200,
-              req: ["my_start"],
-              eff: (c) => {
-                c.mp += 20000;
-              },
-            },
-            {
-              id: "my_tohoku",
-              x: 400,
-              y: 350,
-              t: "東北の守護者",
-              d: "工場+3",
-              cost: 300,
-              req: ["my_date", "my_rice"],
-              eff: (c) => {
-                c.fac += 3;
-              },
-            },
-          ],
-          HYOGO: [
-            {
-              id: "hy_start",
-              x: 400,
-              y: 50,
-              t: "五国の結束",
-              d: "安定度+10%",
-              cost: 70,
-              req: [],
-              eff: (c) => {
-                c.st += 10;
-              },
-            },
-            {
-              id: "hy_kobe",
-              x: 200,
-              y: 200,
-              t: "神戸港の拡張",
+              t: "仙台工廠",
               d: "工場+2, 装備+1000",
-              cost: 200,
-              req: ["hy_start"],
+              cost: 300,
+              req: ["miy_main"],
               eff: (c) => {
                 c.fac += 2;
                 c.eq += 1000;
               },
             },
             {
-              id: "hy_himeji",
-              x: 600,
-              y: 200,
-              t: "白鷺城の防備",
-              d: "全軍防御+20%",
-              cost: 200,
-              req: ["hy_start"],
+              id: "miy_uni",
+              x: 400,
+              y: 350,
+              t: "東北統一作戦",
+              d: "全軍攻撃+15%",
+              cost: 400,
+              req: ["miy_agri", "miy_sen"],
               eff: (c) => {
-                c.territoryDefBonus = (c.territoryDefBonus || 0) + 0.2;
+                c.atkBonus = (c.atkBonus || 0) + 0.15;
+              },
+            },
+          ],
+          GUNMA: [
+            {
+              id: "gun_main",
+              x: 400,
+              y: 50,
+              t: "絶対国防圏",
+              d: "防御+15%",
+              cost: 100,
+              req: [],
+              eff: (c) => {
+                c.territoryDefBonus = (c.territoryDefBonus || 0) + 0.15;
               },
             },
             {
-              id: "hy_bridge",
+              id: "gun_res",
+              x: 200,
+              y: 200,
+              t: "山岳資源開発",
+              d: "工場+2",
+              cost: 250,
+              req: ["gun_main"],
+              eff: (c) => {
+                c.fac += 2;
+              },
+            },
+            {
+              id: "gun_spr",
+              x: 600,
+              y: 200,
+              t: "温泉保養",
+              d: "安定度+20%, 戦争協力度+10%",
+              cost: 200,
+              req: ["gun_main"],
+              eff: (c) => {
+                c.st += 20;
+                c.ws += 10;
+              },
+            },
+            {
+              id: "gun_tank",
               x: 400,
               y: 350,
-              t: "架け橋",
-              d: "政治力+150",
-              cost: 250,
-              req: ["hy_kobe", "hy_himeji"],
+              t: "中島飛行機の遺産",
+              d: "装備生産+20%, XP+50",
+              cost: 400,
+              req: ["gun_res"],
               eff: (c) => {
-                c.pp += 150;
+                c.eqProdBonus = (c.eqProdBonus || 0) + 0.2;
+                c.xp += 50;
+              },
+            },
+          ],
+          HYOGO: [
+            {
+              id: "hyo_main",
+              x: 400,
+              y: 50,
+              t: "神戸港拡張",
+              d: "工場+1, 政治力+50",
+              cost: 100,
+              req: [],
+              eff: (c) => {
+                c.fac += 1;
+                c.pp += 50;
+              },
+            },
+            {
+              id: "hyo_trade",
+              x: 200,
+              y: 200,
+              t: "国際貿易",
+              d: "装備+3000",
+              cost: 250,
+              req: ["hyo_main"],
+              eff: (c) => {
+                c.eq += 3000;
+              },
+            },
+            {
+              id: "hyo_stl",
+              x: 600,
+              y: 200,
+              t: "製鉄所稼働",
+              d: "工場+2",
+              cost: 300,
+              req: ["hyo_main"],
+              eff: (c) => {
+                c.fac += 2;
+              },
+            },
+            {
+              id: "hyo_gate",
+              x: 400,
+              y: 350,
+              t: "日本の玄関口",
+              d: "政治力+200, 人的+20000",
+              cost: 400,
+              req: ["hyo_trade", "hyo_stl"],
+              eff: (c) => {
+                c.pp += 200;
+                c.mp += 20000;
               },
             },
           ],
@@ -1580,7 +1487,14 @@
         P23: { lat: 35.181, lon: 136.906 },
         P40: { lat: 33.606, lon: 130.418 },
       };
-
+      const CapitalCoordsByName = {
+        Hokkaido: { lat: 43.064, lon: 141.347 },
+        Tokyo: { lat: 35.689, lon: 139.692 },
+        Okinawa: { lat: 26.212, lon: 127.681 },
+        Osaka: { lat: 34.693, lon: 135.502 },
+        Aichi: { lat: 35.181, lon: 136.906 },
+        Fukuoka: { lat: 33.606, lon: 130.418 },
+      };
       const MapSys = { hexes: [] };
 
       const Input = {
@@ -1628,7 +1542,6 @@
               Math.abs(e.clientY - this.sy) > 5
             )
               this.isDrag = true;
-
             if (this.isShift && !this.isRight) {
               this.updateBoxSelect(e);
             } else if (this.isRight && this.selUnits.length > 0) {
@@ -1645,24 +1558,31 @@
             this.isDown = false;
             this.mapWrapEl.style.cursor = "grab";
             $("select-box").style.display = "none";
-
             if (this.isDrag) {
               if (this.isShift && !this.isRight) this.finishBoxSelect();
               else if (this.isRight && this.selUnits.length > 0)
                 this.executeBattlePlan();
               return;
             }
-
             const target = e.target;
             if (target.classList.contains("hex")) {
               const h = MapSys.hexes[target.dataset.id];
               if (h) this.onHexClick(e, h);
-            } else if (target.closest(".unit-grp")) {
-              const uEl = target.closest(".unit-grp");
-              const u = Game.units.find((x) => x.el === uEl);
+            } else {
+              const pt = this.screenToWorld(e.clientX, e.clientY);
+              const u = Game.units.find(
+                (u) => Math.abs(u.x - pt.x) < 10 && Math.abs(u.y - pt.y) < 10
+              );
               if (u) {
                 e.stopPropagation();
                 this.onHexClick(e, u.hex);
+              } else {
+                const els = document.elementsFromPoint(e.clientX, e.clientY);
+                const hexEl = els.find((el) => el.classList.contains("hex"));
+                if (hexEl) {
+                  const h = MapSys.hexes[hexEl.dataset.id];
+                  if (h) this.onHexClick(e, h);
+                }
               }
             }
           });
@@ -1671,7 +1591,7 @@
             (e) => {
               e.preventDefault();
               const f = e.deltaY > 0 ? 0.9 : 1.1;
-              Renderer.s = Math.max(0.4, Math.min(5, Renderer.s * f));
+              Renderer.s = Math.max(0.1, Math.min(8, Renderer.s * f));
               Renderer.update();
             },
             { passive: false }
@@ -1692,7 +1612,6 @@
         finishBoxSelect: function () {
           const b = $("select-box").getBoundingClientRect();
           const mapWrapRect = this.mapWrapEl.getBoundingClientRect();
-
           this.selUnits = Game.units.filter((u) => {
             if (u.tag !== Game.player) return false;
             const sx = u.x * Renderer.s + Renderer.x + mapWrapRect.left;
@@ -1815,10 +1734,6 @@
           }
         },
         hlUnits: function () {
-          document
-            .querySelectorAll(".unit-grp")
-            .forEach((el) => el.classList.remove("selected"));
-          this.selUnits.forEach((u) => u.el.classList.add("selected"));
           $("sel-count").innerText = this.selUnits.length;
         },
         findPath: function (start, end, unitTag) {
@@ -1828,7 +1743,6 @@
           const costs = new Map();
           costs.set(start, 0);
           let limit = 0;
-
           const getMinCostNode = () => {
             let minCost = Infinity;
             let minIndex = -1;
@@ -1841,13 +1755,11 @@
             if (minIndex !== -1) return q.splice(minIndex, 1)[0];
             return null;
           };
-
-          while (q.length && limit++ < 1000) {
+          while (q.length && limit++ < 500) {
             const curEntry = getMinCostNode();
             if (!curEntry) break;
             const cur = curEntry.h;
             if (cur === end) break;
-
             for (let n of cur.adj) {
               if (!n) continue;
               if (
@@ -1855,12 +1767,10 @@
                 n.owner !== "_SEA" &&
                 !Game.isWar(unitTag, n.owner) &&
                 !Game.isAlly(unitTag, n.owner)
-              ) {
+              )
                 continue;
-              }
               let moveCost = 1;
               if (n.type === "sea") moveCost = 8;
-
               const newCost = costs.get(cur) + moveCost;
               if (!costs.has(n) || newCost < costs.get(n)) {
                 costs.set(n, newCost);
@@ -1888,33 +1798,73 @@
         layer: null,
         uiLayer: null,
         gameSvg: null,
+        ctx: null,
+        canvas: null,
+        init: function () {
+          this.canvas = $("unit-canvas");
+          this.ctx = this.canvas.getContext("2d");
+          this.resize();
+          window.addEventListener("resize", () => this.resize());
+        },
+        resize: function () {
+          this.canvas.width = Input.mapWrapEl.clientWidth;
+          this.canvas.height = Input.mapWrapEl.clientHeight;
+          this.update();
+        },
         update: function () {
           $(
             "game-svg"
           ).style.transform = `translate(${this.x}px, ${this.y}px) scale(${this.s})`;
+          this.drawUnits();
         },
-        addUnit: function (u) {
-          const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
-          g.className.baseVal = "unit-grp";
-          const inner = document.createElementNS(
-            "http://www.w3.org/2000/svg",
-            "g"
-          );
-          inner.classList.add("unit-inner");
-          inner.innerHTML = `<rect class="unit-box" x="-16" y="-10"/><rect class="unit-bar" x="-14" y="6" width="28" height="2"/><rect class="unit-org-bar" x="-14" y="4" width="28" height="2"/><text class="unit-icon" y="2">${u.icon}</text>`;
-          g.appendChild(inner);
-          g.setAttribute("transform", `translate(${u.x},${u.y})`);
-          this.layer.appendChild(g);
-          u.el = g;
-          u.innerEl = inner;
-          u.bar = inner.querySelector(".unit-bar");
-          u.orgBar = inner.querySelector(".unit-org-bar");
+        drawUnits: function () {
+          const ctx = this.ctx;
+          const width = this.canvas.width;
+          const height = this.canvas.height;
+          ctx.clearRect(0, 0, width, height);
+
+          ctx.save();
+          ctx.translate(this.x, this.y);
+          ctx.scale(this.s, this.s);
+
+          Game.units.forEach((u) => {
+            const isSel = Input.selUnits.includes(u);
+            const isFighting =
+              u.innerEl && u.innerEl.classList.contains("fighting");
+            ctx.fillStyle = isSel ? "#fff" : "#333";
+            if (isSel) ctx.fillRect(u.x - 12, u.y - 8, 24, 16);
+            const ownerCol = Game.countries[u.tag]
+              ? Game.countries[u.tag].col
+              : "#555";
+            ctx.fillStyle = ownerCol;
+            ctx.fillRect(u.x - 11, u.y - 7, 22, 14);
+
+            if (this.s > 0.5) {
+              ctx.fillStyle = "#fff";
+              ctx.font = "10px sans-serif";
+              ctx.textAlign = "center";
+              ctx.textBaseline = "middle";
+              ctx.fillText(u.icon, u.x, u.y);
+            }
+            const hpW = (u.hp / 100) * 20;
+            ctx.fillStyle = "#00e676";
+            ctx.fillRect(u.x - 10, u.y + 5, hpW, 2);
+            const orgW = (u.org / u.maxOrg) * 20;
+            ctx.fillStyle = "#ff9100";
+            ctx.fillRect(u.x - 10, u.y + 3, orgW, 2);
+
+            if (isFighting) {
+              const offset = Math.sin(Date.now() / 50) * 1.5;
+              ctx.fillStyle = "rgba(255, 0, 0, 0.5)";
+              ctx.fillRect(u.x - 12 + offset, u.y - 8 + offset, 24, 16);
+            }
+          });
+          ctx.restore();
+
+          requestAnimationFrame(() => this.drawUnits());
         },
-        updateUnit: function (u) {
-          u.el.setAttribute("transform", `translate(${u.x},${u.y})`);
-          u.bar.setAttribute("width", Math.max(0, (u.hp / 100) * 28));
-          u.orgBar.setAttribute("width", Math.max(0, (u.org / u.maxOrg) * 28));
-        },
+        addUnit: function (u) {},
+        updateUnit: function (u) {},
       };
 
       const UI = {
@@ -1924,7 +1874,6 @@
         update: function () {
           const p = Game.countries[Game.player];
           if (!p) return;
-
           $("res-pp").innerText = ~~p.pp;
           $("res-st").innerText = p.st + "%";
           $("res-ws").innerText = p.ws + "%";
@@ -1943,9 +1892,7 @@
             ts.ha
           }</span><span>🛡️ 防:${ts.def} 貫:${
             ts.prc
-          }</span><span>🚜 装:${ts.arm.toFixed(0)} 速:${ts.spd.toFixed(
-            1
-          )}</span>`;
+          }</span><span>🚜 装:${ts.arm.toFixed(0)}</span>`;
           $("recruit-cost").innerText = `人的:1000 装備:${ts.cost.toFixed(0)}`;
 
           if (p.focus) {
@@ -1963,24 +1910,20 @@
             $("sb-focus-curr").innerText = "国家方針を選択";
             $("sb-focus-bar").style.width = "0%";
           }
-          $("game-date").innerText = "Day " + Game.day;
         },
         updateSidebar: function () {
           const t = Game.selected || Game.player;
           const c = Game.countries[t];
           if (!c) return;
-
           $("sb-name").innerText = c.name;
           $("sb-portrait").innerText = c.flag;
           $("sb-ideology").innerText = "Prefecture";
-
           const diploMsg = $("diplo-msg");
           const diploContent = $("diplo-content");
           const dpName = $("dp-name");
           const dpFaction = $("dp-faction");
           const dpWarStatus = $("dp-war-status");
           const btnDeclareWar = $("btn-declare-war");
-
           if (Game.selected && Game.selected !== Game.player) {
             diploMsg.style.display = "none";
             diploContent.style.display = "block";
@@ -2013,16 +1956,10 @@
         openFocusTree: function () {
           const p = Game.countries[Game.player];
           if (!p) return;
-
-          // Determine tree type
-          let tree = DB.FocusTree.GENERIC;
-          if (p.treeType && DB.FocusTree[p.treeType]) {
-            tree = DB.FocusTree[p.treeType];
-          }
-
+          const treeType = p.treeType || "GENERIC";
+          const tree = DB.FocusTree[treeType] || DB.FocusTree.GENERIC;
           $("focus-nodes").innerHTML = "";
           $("focus-lines").innerHTML = "";
-
           tree.forEach((f) => {
             const el = $c("div", "focus-node");
             el.style.left = f.x + "px";
@@ -2033,17 +1970,14 @@
               !comp && f.req.every((r) => p.completedFocuses.includes(r));
             const isLockedByProgress =
               (p.focus && p.focus.id !== f.id) || p.buildingFactory;
-
             if (comp) el.classList.add("completed");
             else if (avail && !isLockedByProgress) {
               el.classList.add("available");
               el.onclick = () => Game.startFocus(f.id);
             } else el.classList.add("locked");
-
             if (p.focus && p.focus.id === f.id) {
               el.classList.add("available");
             }
-
             $("focus-nodes").appendChild(el);
             f.req.forEach((rid) => {
               const par = tree.find((x) => x.id === rid);
@@ -2091,13 +2025,56 @@
           $("news-feed").prepend(d);
           setTimeout(() => d.remove(), 6000);
         },
+        showStartScreen: function () {
+          const list = $("country-list");
+          list.innerHTML = "";
+          const majors = [
+            "Tokyo",
+            "Osaka",
+            "Aichi",
+            "Fukuoka",
+            "Hokkaido",
+            "Miyagi",
+            "Gunma",
+            "Hyogo",
+          ];
+          const sortedTags = Object.keys(Game.countries)
+            .filter((t) => t !== "_SEA")
+            .sort((a, b) => {
+              const cA = Game.countries[a];
+              const cB = Game.countries[b];
+              const pA = majors.some((m) => cA.name.includes(m)) ? 1 : 0;
+              const pB = majors.some((m) => cB.name.includes(m)) ? 1 : 0;
+              if (pA !== pB) return pB - pA;
+              return cB.fac - cA.fac;
+            });
+          sortedTags.forEach((tag) => {
+            const c = Game.countries[tag];
+            if (c.provs.length === 0) return;
+            const d = $c("div", "country-card");
+            let special = "";
+            if (c.treeType !== "GENERIC")
+              special = `<div class="special-tag">★ 固有方針あり</div>`;
+            d.innerHTML = `<div class="c-flag" style="color:${c.col}">${
+              c.flag
+            }</div><div class="c-name">${
+              c.name
+            }</div><div class="c-info">工場:${c.fac} 人的:${nFmt(
+              c.mp
+            )}</div>${special}`;
+            d.onclick = () => Game.startGame(tag);
+            list.appendChild(d);
+          });
+          $("start-screen").style.display = "flex";
+          $("loading-overlay").style.display = "none";
+        },
       };
 
       const Game = {
         day: 1,
         speed: 1,
         running: false,
-        player: "Tokyo",
+        player: "",
         countries: {},
         units: [],
         wars: [],
@@ -2106,58 +2083,29 @@
         lastTickTime: 0,
         tickInterval: 100,
         geoData: null,
+        unitGrid: new Map(),
 
         init: async function () {
           await this.loadMapData();
           Input.init();
-          this.initMap();
+          Renderer.init(); // Fixed: Init canvas before using it in initMap -> update -> drawUnits
           this.initCountries();
-          $("loading-overlay").style.display = "none";
-
-          // Instead of starting immediately, show Start Screen
-          this.showStartScreen();
+          this.initMap();
+          UI.showStartScreen();
+          requestAnimationFrame(() => Renderer.drawUnits());
         },
 
-        showStartScreen: function () {
-          const screen = $("start-screen");
-          const grid = $("start-grid");
-          grid.innerHTML = "";
-
-          Object.values(this.countries).forEach((c) => {
-            if (c.tag === "_SEA") return;
-            const d = document.createElement("div");
-            d.className = "country-card";
-            d.innerHTML = `<div class="cc-flag">${
-              c.flag
-            }</div><div><div class="cc-name">${
-              c.name
-            }</div><div class="cc-diff">工場: ${c.fac} | 人的: ${nFmt(
-              c.mp
-            )}</div></div>`;
-            d.onclick = () => this.startGame(c.tag);
-            grid.appendChild(d);
+        startGame: function (playerTag) {
+          this.player = playerTag;
+          this.countries[this.player].col = "#b71c1c";
+          MapSys.hexes.forEach((h) => {
+            if (h.owner === this.player) h.el.setAttribute("fill", "#b71c1c");
           });
-
-          screen.style.display = "flex";
-        },
-
-        startGame: function (tag) {
-          this.player = tag;
           $("start-screen").style.display = "none";
           this.spawnInitialUnits();
           UI.init();
           this.setSpeed(1);
           this.lastTickTime = performance.now();
-
-          // Center camera on player capital
-          const p = this.countries[tag];
-          if (p && p.capital) {
-            const mapRect = $("map-wrap").getBoundingClientRect();
-            Renderer.x = mapRect.width / 2 - p.capital.x * Renderer.s;
-            Renderer.y = mapRect.height / 2 - p.capital.y * Renderer.s;
-            Renderer.update();
-          }
-
           requestAnimationFrame(this.loop.bind(this));
         },
 
@@ -2198,7 +2146,6 @@
             if (tag === "_SEA") return;
             const c = this.countries[tag];
             if (c.provs.length === 0 && !c.dead) return;
-
             c.pp += (0.5 + c.fac / 50) * (1 + (c.ppGainBonus || 0));
             c.eq +=
               c.fac *
@@ -2206,13 +2153,16 @@
               (1 + (c.facProdBonus || 0)) *
               (1 + (c.eqProdBonus || 0));
             if (c.eq > 100000) c.eq = 100000;
+            c.peaceTimer = (c.peaceTimer || 0) + 1;
 
             const fighting = this.units.some(
-              (u) => u.tag === tag && u.innerEl.classList.contains("fighting")
+              (u) =>
+                u.tag === tag &&
+                u.innerEl &&
+                u.innerEl.classList.contains("fighting")
             );
             c.xp += (0.05 + (fighting ? 0.2 : 0)) * (1 + (c.xpGainBonus || 0));
             if (c.xp > 500) c.xp = 500;
-
             if (c.focus) {
               c.focusProg++;
               if (c.focusProg >= c.focus.cost) this.completeFocus(c);
@@ -2226,13 +2176,12 @@
                 c.buildingFactory = null;
               }
             }
-
             if (this.day % 30 === 0 && c.mp < 1e6) c.mp += c.fac * 100;
           });
 
           this.aiTimer++;
           if (this.aiTimer > 2) {
-            const aiBatch = 5;
+            const aiBatch = 8;
             const startIdx = (this.day * aiBatch) % tags.length;
             for (let i = 0; i < aiBatch; i++) {
               const t = tags[(startIdx + i) % tags.length];
@@ -2240,7 +2189,6 @@
             }
             this.aiTimer = 0;
           }
-
           this.updateUnits();
           UI.update();
         },
@@ -2253,7 +2201,6 @@
               const id = props.id
                 ? "P" + props.id
                 : name.replace(/[^a-zA-Z0-9]/g, "");
-
               this.countries[id] = {
                 tag: id,
                 name: name,
@@ -2263,6 +2210,7 @@
                 fac: 2 + Math.floor(Math.random() * 3),
                 eq: 2000,
                 xp: 10,
+                doctrine: "balanced",
                 provs: [],
                 pp: 50,
                 st: 80,
@@ -2273,36 +2221,24 @@
                 faction: null,
                 template: { bat: ["inf", "inf", "inf"], sup: [] },
                 buildingFactory: null,
-                lastWarDay: 1, // AI Peace Timer Initialization
-                treeType: null,
+                treeType: "GENERIC",
+                peaceTimer: 0,
               };
-
-              // Assign Unique Focus Trees and Colors
               if (name.includes("Tokyo") || name.includes("東京")) {
-                this.countries[id].col = "#b71c1c";
-                this.countries[id].mp = 200000;
-                this.countries[id].fac = 12;
                 this.countries[id].treeType = "TOKYO";
+                this.countries[id].fac = 12;
+                this.countries[id].mp = 200000;
               } else if (name.includes("Osaka") || name.includes("大阪")) {
-                this.countries[id].col = "#f57f17";
-                this.countries[id].mp = 150000;
-                this.countries[id].fac = 10;
                 this.countries[id].treeType = "OSAKA";
-              } else if (name.includes("Gunma") || name.includes("群馬")) {
-                this.countries[id].col = "#5d4037";
-                this.countries[id].mp = 80000;
-                this.countries[id].fac = 5;
-                this.countries[id].treeType = "GUNMA";
+                this.countries[id].fac = 10;
               } else if (name.includes("Miyagi") || name.includes("宮城")) {
-                this.countries[id].col = "#1a237e";
-                this.countries[id].mp = 90000;
-                this.countries[id].fac = 6;
                 this.countries[id].treeType = "MIYAGI";
+                this.countries[id].fac = 6;
+              } else if (name.includes("Gunma") || name.includes("群馬")) {
+                this.countries[id].treeType = "GUNMA";
               } else if (name.includes("Hyogo") || name.includes("兵庫")) {
-                this.countries[id].col = "#006064";
-                this.countries[id].mp = 100000;
-                this.countries[id].fac = 8;
                 this.countries[id].treeType = "HYOGO";
+                this.countries[id].fac = 8;
               }
             });
           }
@@ -2368,14 +2304,6 @@
           if (!hex) return;
           const tmplCopy = { bat: [...template.bat], sup: [...template.sup] };
           const stats = this.calcStats(tmplCopy);
-          const mainType = tmplCopy.bat[0];
-          const icon = DB.UnitTypes[mainType].icon;
-          const c = this.countries[tag];
-
-          // Apply bonuses
-          stats.sa *= 1 + (c.atkBonus || 0);
-          stats.def *= 1 + (c.territoryDefBonus || 0);
-
           const u = {
             id: Math.random().toString(36),
             tag: tag,
@@ -2389,20 +2317,51 @@
             maxOrg: stats.org,
             template: tmplCopy,
             stats: stats,
-            icon: icon,
+            icon: DB.UnitTypes[tmplCopy.bat[0]].icon,
+            innerEl: {
+              classList: {
+                add: (c) => {
+                  u._fighting = true;
+                },
+                remove: (c) => {
+                  u._fighting = false;
+                },
+                contains: (c) => u._fighting,
+              },
+            }, // Mock DOM for Canvas logic
+            _fighting: false,
           };
           this.units.push(u);
-          Renderer.addUnit(u);
+          this.addToGrid(u, hex);
+        },
+
+        addToGrid: function (u, hex) {
+          if (!this.unitGrid.has(hex.id)) this.unitGrid.set(hex.id, []);
+          this.unitGrid.get(hex.id).push(u);
+        },
+        removeFromGrid: function (u, hex) {
+          if (!this.unitGrid.has(hex.id)) return;
+          const arr = this.unitGrid.get(hex.id);
+          const idx = arr.indexOf(u);
+          if (idx !== -1) arr.splice(idx, 1);
+          if (arr.length === 0) this.unitGrid.delete(hex.id);
+        },
+        getEnemyInHex: function (hex, myTag) {
+          if (!this.unitGrid.has(hex.id)) return null;
+          const enemies = this.unitGrid
+            .get(hex.id)
+            .filter((u) => u.tag !== myTag && this.isWar(u.tag, myTag));
+          return enemies.length > 0 ? enemies[0] : null;
         },
 
         updateUnits: function () {
-          this.units = this.units.filter((u) => {
+          for (let i = this.units.length - 1; i >= 0; i--) {
+            const u = this.units[i];
             if (u.hp <= 0) {
-              u.el.remove();
-              return false;
+              this.removeFromGrid(u, u.hex);
+              this.units.splice(i, 1);
             }
-            return true;
-          });
+          }
 
           this.units.forEach((u) => {
             if (u.state === "idle" && u.org < u.maxOrg) u.org += 0.8;
@@ -2415,20 +2374,8 @@
                 return;
               }
 
-              const enemyInNext = this.units.find(
-                (e) =>
-                  e.tag !== u.tag &&
-                  e.hex === next &&
-                  this.isWar(u.tag, e.tag) &&
-                  !this.isAlly(u.tag, e.tag)
-              );
-              const enemyHere = this.units.find(
-                (e) =>
-                  e.tag !== u.tag &&
-                  Math.hypot(e.x - u.x, e.y - u.y) < 15 &&
-                  this.isWar(u.tag, e.tag) &&
-                  !this.isAlly(u.tag, e.tag)
-              );
+              const enemyInNext = this.getEnemyInHex(next, u.tag);
+              const enemyHere = this.getEnemyInHex(u.hex, u.tag);
               const enemy =
                 enemyHere ||
                 (Math.hypot(next.x - u.x, next.y - u.y) < 15
@@ -2458,16 +2405,6 @@
                   enemy.hp -= myDmg * 0.2;
                   u.org -= enemyDmg * 0.8;
                   u.hp -= enemyDmg * 0.2;
-                  const dmgTxt = document.createElementNS(
-                    "http://www.w3.org/2000/svg",
-                    "text"
-                  );
-                  dmgTxt.textContent = "💥";
-                  dmgTxt.setAttribute("x", u.x);
-                  dmgTxt.setAttribute("y", u.y);
-                  dmgTxt.setAttribute("class", "dmg-txt");
-                  Renderer.uiLayer.appendChild(dmgTxt);
-                  setTimeout(() => dmgTxt.remove(), 800);
                   if (u.org <= 0) {
                     u.org = 0;
                     u.state = "idle";
@@ -2484,9 +2421,6 @@
               const terrainMoveCost = DB.Terrain[next.type].moveCost || 1;
               const spd = unitSpeed / terrainMoveCost;
 
-              if (u.hex.type === "sea") u.el.classList.add("moving-sea");
-              else u.el.classList.remove("moving-sea");
-
               const dx = next.x - u.x,
                 dy = next.y - u.y;
               const dist = Math.hypot(dx, dy);
@@ -2501,10 +2435,13 @@
                 if (u.org > 5) this.conquerHex(u, next);
               }
               if (dist <= spd || isNaN(dist)) {
+                this.removeFromGrid(u, u.hex);
                 u.x = next.x;
                 u.y = next.y;
                 u.hex = next;
                 u.path.shift();
+                this.addToGrid(u, next);
+
                 if (
                   u.hex.owner !== "_SEA" &&
                   u.hex.owner !== u.tag &&
@@ -2518,7 +2455,6 @@
                 u.x += (dx / dist) * spd;
                 u.y += (dy / dist) * spd;
               }
-              Renderer.updateUnit(u);
             }
           });
         },
@@ -2600,7 +2536,6 @@
               c.capIcon.setAttribute("y", c.capital.y + 6);
               return;
             }
-
             let best = c.provs[0];
             const fixed =
               CapitalCoords[c.tag] ||
@@ -2614,7 +2549,6 @@
               (c.name.includes("Okinawa")
                 ? CapitalCoordsByName["Okinawa"]
                 : null);
-
             if (fixed) {
               let minD = Infinity;
               c.provs.forEach((p) => {
@@ -2642,7 +2576,6 @@
                 }
               });
             }
-
             c.capital = best;
             if (!c.capIcon) {
               const t = document.createElementNS(
@@ -2668,7 +2601,6 @@
           if (oldOwner === u.tag) return;
           const oc = this.countries[oldOwner];
           const nc = this.countries[u.tag];
-
           if (h.factories > 0) {
             nc.fac += h.factories;
             if (oc) oc.fac -= h.factories;
@@ -2677,7 +2609,6 @@
           h.owner = u.tag;
           h.el.setAttribute("fill", nc.col);
           nc.provs.push(h);
-
           if (oc && oc.capital === h) {
             UI.notify(`${nc.name} が ${oc.name} の首都を陥落させた！`, "war");
             oc.ws -= 50;
@@ -2705,9 +2636,11 @@
           lc.provs = [];
           lc.dead = true;
           this.units = this.units.filter((u) => u.tag !== loser);
-          document.querySelectorAll(".unit-grp").forEach((el) => {
-            const uObj = this.units.find((x) => x.el === el);
-            if (!uObj) el.remove();
+          this.unitGrid.forEach((v, k) => {
+            this.unitGrid.set(
+              k,
+              v.filter((u) => u.tag !== loser)
+            );
           });
           this.wars = this.wars.filter(
             (w) => w.atk !== loser && w.def !== loser
@@ -2718,7 +2651,8 @@
           if (this.isWar(a, b) || this.isAlly(a, b)) return;
           this.wars.push({ atk: a, def: b });
           this.tension += 2;
-          this.countries[a].lastWarDay = this.day; // Update Timer
+          if (this.countries[a]) this.countries[a].peaceTimer = 0;
+          if (this.countries[b]) this.countries[b].peaceTimer = 0;
           UI.notify(
             `${this.countries[a].name} が ${this.countries[b].name} に宣戦布告！`,
             "war"
@@ -2739,7 +2673,7 @@
         justifyWar: function () {
           if (this.selected && this.selected !== this.player) {
             UI.notify("正当化工作開始...");
-            setTimeout(() => this.declareWar(this.player, this.selected), 2000); // 短縮
+            setTimeout(() => this.declareWar(this.player, this.selected), 2000);
           }
         },
         startFocus: function (fid) {
@@ -2748,12 +2682,9 @@
             UI.notify("工場建設中は国家方針を開始できません。", "warn");
             return;
           }
-
-          let tree = DB.FocusTree.GENERIC;
-          if (c.treeType && DB.FocusTree[c.treeType])
-            tree = DB.FocusTree[c.treeType];
-
-          const f = tree.find((x) => x.id === fid);
+          const treeType = c.treeType || "GENERIC";
+          const tree = DB.FocusTree[treeType];
+          const f = tree && tree.find((x) => x.id === fid);
           if (f && c.pp >= f.cost) {
             c.focus = f;
             c.focusProg = 0;
@@ -2778,6 +2709,29 @@
             .forEach((b, i) =>
               b.classList.toggle("active", [0, 1, 3, 5].indexOf(s) === i)
             );
+        },
+        getNeighbors: function (tag) {
+          const c = this.countries[tag];
+          if (!c) return [];
+          const neighbors = new Set();
+          c.provs.forEach((p) => {
+            p.adj.forEach((a) => {
+              if (a.owner !== "_SEA" && a.owner !== tag) neighbors.add(a.owner);
+            });
+          });
+          return Array.from(neighbors);
+        },
+        getFrontlineHexes: function (tag) {
+          const c = this.countries[tag];
+          if (!c) return [];
+          return c.provs.filter((p) =>
+            p.adj.some(
+              (a) =>
+                a.owner !== "_SEA" &&
+                a.owner !== tag &&
+                this.isWar(tag, a.owner)
+            )
+          );
         },
 
         initMap: function () {
@@ -2821,18 +2775,14 @@
               });
             });
           });
-
           minX -= 1;
           maxX += 1;
           minY -= 1;
           maxY += 1;
-
           const mapScale = 120;
           const R = 18;
-
           const mapPixelWidth = (maxX - minX) * mapScale * 1.5;
           const mapPixelHeight = (maxY - minY) * mapScale * 1.8;
-
           const cols = Math.ceil(mapPixelWidth / (R * 1.5));
           const rows = Math.ceil(mapPixelHeight / (R * 1.732));
 
@@ -2853,19 +2803,12 @@
             return inside;
           };
 
-          // Reuse hexes if map is not rebuilt
-          if (this.countries && Object.keys(this.countries).length > 0) {
-            // just render logic needed, but here we assume first run
-          }
-
           for (let gy = 0; gy < rows; gy++) {
             for (let gx = 0; gx < cols; gx++) {
               const x = gx * R * 1.5 + 25;
               const y = gy * R * 1.732 + 25 + (gx % 2 ? R * 0.866 : 0);
-
               const lon = x / (mapScale * 1.5) + minX;
               const lat = maxY - y / (mapScale * 1.8);
-
               let owner = "_SEA";
               for (const f of this.geoData.features) {
                 let inside = false;
@@ -2892,7 +2835,6 @@
                   break;
                 }
               }
-
               const hexEl = document.createElementNS(
                 "http://www.w3.org/2000/svg",
                 "polygon"
@@ -2909,47 +2851,38 @@
               hexEl.dataset.id = MapSys.hexes.length;
 
               if (owner !== "_SEA") {
-                // We init countries LATER now, so we need to store hex data for assignment
-                // BUT initCountries is called BEFORE this in the original flow?
-                // NO, loadMapData -> initMap -> initCountries?
-                // Let's stick to: InitMap finds owners based on GEOJSON.
-                // We need Country Objects to exist?
-                // Actually, we can just assign the ID string here, and link up later.
-              }
-
-              // Temporary storage, proper assignment happens after initCountries or during
-              // Wait, initCountries needs GeoJSON features.
-              // Let's assign hexes to countries in a second pass or inside the loop if countries exist.
-              // Since we changed order: initMap calls inside loop.
-              // The issue is `this.countries[owner]` might not exist if we run initMap before initCountries.
-              // So let's run initCountries FIRST in `Game.init`.
-
-              if (owner !== "_SEA" && this.countries[owner]) {
                 const c = this.countries[owner];
-                hexEl.setAttribute("fill", c.col);
-                c.provs.push({
-                  gx,
-                  gy,
-                  x,
-                  y,
-                  lon,
-                  lat,
-                  el: hexEl,
-                  adj: [],
-                  owner: owner,
-                  type: "plains",
-                  factories: 0,
-                });
-                const h = c.provs[c.provs.length - 1];
-                MapSys.hexes.push(h);
-                svg.appendChild(hexEl);
-                if (Math.random() < 0.05) {
-                  h.factories = 1;
-                  c.fac++;
+                if (c) {
+                  hexEl.setAttribute("fill", c.col);
+                  this.countries[owner].provs.push({
+                    id: MapSys.hexes.length,
+                    gx,
+                    gy,
+                    x,
+                    y,
+                    lon,
+                    lat,
+                    el: hexEl,
+                    adj: [],
+                    owner: owner,
+                    type: "plains",
+                    factories: 0,
+                  });
+                  const h =
+                    this.countries[owner].provs[
+                      this.countries[owner].provs.length - 1
+                    ];
+                  MapSys.hexes.push(h);
+                  svg.appendChild(hexEl);
+                  if (Math.random() < 0.05) {
+                    h.factories = 1;
+                    c.fac++;
+                  }
                 }
               } else {
                 svg.appendChild(hexEl);
                 MapSys.hexes.push({
+                  id: MapSys.hexes.length,
                   gx,
                   gy,
                   x,
@@ -2968,7 +2901,6 @@
 
           const gridMap = {};
           MapSys.hexes.forEach((h) => (gridMap[`${h.gx},${h.gy}`] = h));
-
           MapSys.hexes.forEach((a) => {
             const isOdd = a.gx % 2 === 1;
             const offsets = isOdd
@@ -2993,7 +2925,6 @@
               if (gridMap[k]) a.adj.push(gridMap[k]);
             });
           });
-
           Renderer.layer = document.createElementNS(
             "http://www.w3.org/2000/svg",
             "g"
@@ -3004,13 +2935,17 @@
             "g"
           );
           svg.appendChild(Renderer.uiLayer);
-
           this.calcCapitals();
           Renderer.s = 0.6;
+          const screenCX = Input.mapWrapEl.offsetWidth / 2;
+          const screenCY = Input.mapWrapEl.offsetHeight / 2;
+          Renderer.x = screenCX - 800 * Renderer.s;
+          Renderer.y = screenCY - 600 * Renderer.s;
           Renderer.update();
         },
       };
 
+      // AIロジック（平押し対応版）
       const AI = {
         runCountry: function (tag) {
           const c = Game.countries[tag];
@@ -3044,12 +2979,9 @@
             Game.spawnUnit(tag, c.capital, c.template);
           }
 
-          // Select Focus Tree
           if (!c.focus && !c.buildingFactory) {
-            let tree = DB.FocusTree.GENERIC;
-            if (c.treeType && DB.FocusTree[c.treeType])
-              tree = DB.FocusTree[c.treeType];
-
+            const treeType = c.treeType || "GENERIC";
+            const tree = DB.FocusTree[treeType];
             const available = tree.filter(
               (f) =>
                 !c.completedFocuses.includes(f.id) &&
@@ -3059,36 +2991,43 @@
               Game.countries[tag].focus = available[0];
           }
 
-          const APM = 2;
-          let actions = 0;
           const idleUnits = myUnits
-            .filter((u) => u.state === "idle")
+            .filter((u) => u.state === "idle" && u.org > 20)
             .sort(() => Math.random() - 0.5);
+          const frontline = Game.getFrontlineHexes(tag);
+          let actions = 0;
+          const APM = 5;
 
           for (let u of idleUnits) {
             if (actions >= APM) break;
             let target = null;
-            const neighbors = u.hex.adj;
-            const enemyNeighbors = neighbors.filter(
-              (n) =>
-                n.owner !== "_SEA" &&
-                n.owner !== tag &&
-                enemies.includes(n.owner)
-            );
 
-            if (enemyNeighbors.length > 0) {
-              target =
-                enemyNeighbors[
-                  Math.floor(Math.random() * enemyNeighbors.length)
-                ];
-            }
-
-            if (!target && enemies.length > 0) {
-              const valid = neighbors.filter((n) => n.owner === tag);
-              if (valid.length)
-                target = valid[Math.floor(Math.random() * valid.length)];
-            } else if (!target && Math.random() < 0.1) {
-              const valid = neighbors.filter((n) => n.owner === tag);
+            const enemyAdj = u.hex.adj.filter((n) => enemies.includes(n.owner));
+            if (enemyAdj.length > 0) {
+              target = enemyAdj[Math.floor(Math.random() * enemyAdj.length)];
+            } else if (frontline.length > 0) {
+              let bestF = null;
+              let minD = Infinity;
+              for (let i = 0; i < 5; i++) {
+                const f =
+                  frontline[Math.floor(Math.random() * frontline.length)];
+                const d = (u.x - f.x) ** 2 + (u.y - f.y) ** 2;
+                if (d < minD) {
+                  minD = d;
+                  bestF = f;
+                }
+              }
+              if (bestF) {
+                const path = Input.findPath(u.hex, bestF, tag);
+                if (path && path.length) {
+                  u.path = path.slice(0, 5);
+                  u.state = "moving";
+                  actions++;
+                  continue;
+                }
+              }
+            } else if (Math.random() < 0.1) {
+              const valid = u.hex.adj.filter((n) => n.owner === tag);
               if (valid.length)
                 target = valid[Math.floor(Math.random() * valid.length)];
             }
@@ -3103,24 +3042,13 @@
             }
           }
 
-          // --- Aggressive AI Update ---
-          // Threshold check: ~2 minutes at 5x speed.
-          // 5x speed sets tick interval to 20ms (1000 / 50).
-          // 120 seconds = 120,000ms.
-          // 120,000 / 20 = 6000 ticks.
-          // Game.day increments every tick.
-          // So if (Game.day - c.lastWarDay > 6000) ...
-          // Let's set it slightly lower to ensure action: 1500 days (approx 30 sec real time at max speed) for excitement.
-
-          const peaceThreshold = 1500;
-
+          const aggressionThreshold = 200;
           if (enemies.length === 0) {
             const neighbors = Game.getNeighbors(tag);
             if (neighbors.length > 0) {
-              // Random low chance OR Force war if timer exceeded
-              const forceWar = Game.day - (c.lastWarDay || 0) > peaceThreshold;
-
-              if (forceWar || (Math.random() < 0.005 && myUnits.length > 5)) {
+              let chance = 0.005;
+              if (c.peaceTimer > aggressionThreshold) chance = 0.5;
+              if (Math.random() < chance && myUnits.length > 3) {
                 const target =
                   neighbors[Math.floor(Math.random() * neighbors.length)];
                 Game.declareWar(tag, target);
@@ -3129,49 +3057,37 @@
           }
         },
       };
+
       const Designer = {
         tmp: { bat: [], sup: [] },
-
         open: function () {
           const p = Game.countries[Game.player];
           if (!p) return;
-
-          this.tmp = {
-            bat: [...p.template.bat],
-            sup: [...p.template.sup],
-          };
-
+          this.tmp = { bat: [...p.template.bat], sup: [...p.template.sup] };
           this.renderOptions();
           this.renderGrid();
           this.updateStats();
           $("design-modal").style.display = "flex";
         },
-
         close: function () {
           $("design-modal").style.display = "none";
         },
-
         renderOptions: function () {
           const batBox = $("opt-battalions");
           const supBox = $("opt-support");
           batBox.innerHTML = "";
           supBox.innerHTML = "";
-
           Object.keys(DB.UnitTypes).forEach((k) => {
             const u = DB.UnitTypes[k];
             const div = $c("div", "unit-opt");
             div.innerHTML = `<span class="unit-opt-icon">${u.icon}</span><span>${u.name}</span><span style="font-size:11px;color:#aaa;margin-left:auto">IC:${u.cost}</span>`;
             div.onclick = () => this.addUnit(k);
-
             if (u.type === "bat") batBox.appendChild(div);
             else supBox.appendChild(div);
           });
         },
-
         renderGrid: function () {
           $("ds-xp").innerText = ~~Game.countries[Game.player].xp;
-
-          // Render Main Battalion Slots (Max 6)
           const batGrid = $("grid-bat");
           batGrid.innerHTML = "";
           for (let i = 0; i < 6; i++) {
@@ -3185,8 +3101,6 @@
             }
             batGrid.appendChild(slot);
           }
-
-          // Render Support Slots (Max 3)
           const supGrid = $("grid-sup");
           supGrid.innerHTML = "";
           for (let i = 0; i < 3; i++) {
@@ -3201,7 +3115,6 @@
             supGrid.appendChild(slot);
           }
         },
-
         addUnit: function (id) {
           const u = DB.UnitTypes[id];
           if (u.type === "bat") {
@@ -3218,14 +3131,12 @@
           this.renderGrid();
           this.updateStats();
         },
-
         removeUnit: function (cat, idx) {
           if (cat === "bat") this.tmp.bat.splice(idx, 1);
           else this.tmp.sup.splice(idx, 1);
           this.renderGrid();
           this.updateStats();
         },
-
         updateStats: function () {
           const s = Game.calcStats(this.tmp);
           $("ds-atk-s").innerText = s.sa.toFixed(1);
@@ -3233,12 +3144,8 @@
           $("ds-def").innerText = s.def.toFixed(1);
           $("ds-brk").innerText = s.brk.toFixed(1);
           $("ds-arm").innerText = s.arm.toFixed(1);
-          $("ds-prc").innerText = s.prc.toFixed(1);
-          $("ds-org").innerText = s.org.toFixed(1);
-          $("ds-spd").innerText = s.spd.toFixed(1);
           $("ds-cost").innerText = s.cost.toFixed(0);
         },
-
         save: function () {
           const p = Game.countries[Game.player];
           if (this.tmp.bat.length === 0) {
@@ -3249,25 +3156,12 @@
             UI.notify("陸軍経験値が足りません (10必要)", "warn");
             return;
           }
-
           p.xp -= 10;
           p.template = { bat: [...this.tmp.bat], sup: [...this.tmp.sup] };
-
           UI.notify("師団編成を保存しました", "success");
           UI.update();
           this.close();
         },
-      };
-      Game.getNeighbors = function (tag) {
-        const c = this.countries[tag];
-        if (!c) return [];
-        const neighbors = new Set();
-        c.provs.forEach((p) => {
-          p.adj.forEach((a) => {
-            if (a.owner !== "_SEA" && a.owner !== tag) neighbors.add(a.owner);
-          });
-        });
-        return Array.from(neighbors);
       };
 
       document.addEventListener("DOMContentLoaded", () => Game.init());
