@@ -1,29 +1,29 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
   <head>
     <meta charset="UTF-8" />
-    <title>47都道府県</title>
+    <title>AI Strategy Game - TNO Redux Edition</title>
     <style>
+      /* === 全体設定 (TNO風ダークテーマ) === */
       body {
-        background: #1e1e1e;
+        background: #121212;
         color: #e0e0e0;
-        font-family: "Segoe UI", sans-serif;
+        font-family: "Yu Gothic UI", "Segoe UI", sans-serif;
         margin: 0;
         overflow: hidden;
         user-select: none;
       }
 
-      /* UI Overlay (Keep unchanged) */
+      /* === トップバー === */
       #topbar {
         display: flex;
         height: 50px;
-        background: #2d2d2d;
-        border-bottom: 1px solid #444;
+        background: #1f1f1f;
+        border-bottom: 1px solid #333;
         align-items: center;
         padding: 0 15px;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
         z-index: 20;
-        position: relative;
       }
       .flag {
         font-size: 28px;
@@ -80,23 +80,24 @@
         text-shadow: 0 0 5px var(--hl);
       }
 
+      /* === レイアウト === */
       #game-layout {
         display: flex;
         height: calc(100vh - 50px);
       }
       #sidebar {
         width: 320px;
-        background: #252525;
+        background: #1a1a1a;
         border-right: 1px solid #333;
         display: flex;
         flex-direction: column;
         z-index: 10;
-        box-shadow: 2px 0 10px rgba(0, 0, 0, 0.5);
+        box-shadow: 2px 0 15px rgba(0, 0, 0, 0.6);
       }
       .tabs {
         display: flex;
         height: 45px;
-        background: #1f1f1f;
+        background: #151515;
       }
       .tab {
         flex: 1;
@@ -104,19 +105,20 @@
         align-items: center;
         justify-content: center;
         cursor: pointer;
-        color: #777;
+        color: #666;
         border-bottom: 3px solid transparent;
         font-size: 14px;
         transition: 0.2s;
+        font-weight: bold;
       }
       .tab:hover {
-        background: #2a2a2a;
-        color: #aaa;
+        background: #222;
+        color: #999;
       }
       .tab.active {
         color: #fff;
         border-bottom-color: var(--hl);
-        background: #333;
+        background: #252525;
       }
       .view {
         padding: 20px;
@@ -128,67 +130,21 @@
         display: block;
       }
 
-      /* Buttons */
-      .btn {
-        width: 100%;
-        padding: 10px;
-        background: linear-gradient(to bottom, #4a4a4a, #333);
-        border: 1px solid #555;
-        color: #fff;
-        cursor: pointer;
-        margin-bottom: 10px;
-        border-radius: 3px;
-        font-weight: bold;
-        text-shadow: 0 1px 2px #000;
-        box-shadow: 0 2px 0 #222;
-        transition: 0.1s;
-      }
-      .btn:active {
-        transform: translateY(2px);
-        box-shadow: none;
-      }
-      .btn:hover {
-        filter: brightness(1.1);
-      }
-      .btn-green {
-        background: linear-gradient(to bottom, #43a047, #2e7d32);
-        border-color: #1b5e20;
-      }
-      .btn-red {
-        background: linear-gradient(to bottom, #e53935, #c62828);
-        border-color: #b71c1c;
-      }
-
-      /* Map Area - Hybrid SVG/Canvas */
+      /* === マップエリア === */
       #map-wrap {
         flex: 1;
         position: relative;
         overflow: hidden;
-        background: #0d1b2a;
+        background: #050a10;
         cursor: grab;
       }
       #game-svg {
         width: 100%;
         height: 100%;
-        position: absolute;
-        top: 0;
-        left: 0;
         overflow: visible;
         transform-origin: 0 0;
         will-change: transform;
-        pointer-events: auto;
       }
-      /* Canvas for Units (On top of SVG map) */
-      #unit-canvas {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        pointer-events: none;
-        z-index: 5;
-      }
-
       .hex {
         stroke: #000;
         stroke-width: 1;
@@ -200,88 +156,130 @@
         stroke-width: 2;
       }
       .hex.sea {
-        fill: #0d1b2a;
+        fill: #050a10;
         stroke: none;
       }
 
-      /* UI Elements */
-      .modal {
-        position: fixed;
-        inset: 0;
-        background: rgba(0, 0, 0, 0.6);
-        z-index: 100;
-        display: none;
-        align-items: center;
-        justify-content: center;
-        backdrop-filter: blur(2px);
+      /* === ユニット === */
+      .unit-grp {
+        cursor: pointer;
+        will-change: transform;
+        transition: filter 0.2s;
       }
-      .modal-win {
-        width: 900px;
-        height: 700px;
-        background: #222;
-        border: 1px solid #444;
-        display: flex;
-        flex-direction: column;
-        box-shadow: 0 10px 50px #000;
-        border-radius: 5px;
-        overflow: hidden;
+      .unit-grp:hover {
+        filter: brightness(1.5);
+        z-index: 1000;
       }
-      .modal-head {
-        padding: 10px 20px;
-        background: #333;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        border-bottom: 1px solid #444;
+      .unit-grp.selected .unit-box {
+        stroke: #fff;
+        stroke-width: 1.5;
+        filter: drop-shadow(0 0 3px #fff);
       }
-      .modal-body {
-        flex: 1;
-        overflow: auto;
-        position: relative;
-        background: #1a1a1a;
+      .unit-box {
+        width: 22px;
+        height: 14px;
+        fill: #333;
+        stroke: #000;
+        stroke-width: 1;
+      }
+      .unit-icon {
+        font-size: 10px;
+        fill: #fff;
+        text-anchor: middle;
+        pointer-events: none;
+      }
+      .unit-bar {
+        fill: #00e676;
+      }
+      .unit-org-bar {
+        fill: #ff9100;
+      }
+      .unit-inner.fighting .unit-box {
+        stroke: #ff5252;
+        stroke-width: 2px;
       }
 
-      /* Focus Tree */
+      /* === フォーカスツリー（大規模対応） === */
+      #focus-modal .modal-body {
+        overflow: hidden;
+        cursor: grab;
+        background: #111;
+      }
+      #focus-modal .modal-body:active {
+        cursor: grabbing;
+      }
       #focus-canvas {
-        width: 1600px;
-        height: 1200px;
+        width: 3000px;
+        height: 2000px;
         position: relative;
         background-image: radial-gradient(#333 1px, transparent 1px);
-        background-size: 20px 20px;
+        background-size: 30px 30px;
+        transform-origin: 0 0;
       }
+
       .focus-node {
         position: absolute;
-        width: 250px;
-        min-height: 100px;
-        padding: 15px;
-        background: #2c2c2c;
+        width: 240px;
+        min-height: 90px;
+        padding: 12px;
+        background: #222;
         border: 2px solid #444;
-        color: #ddd;
-        font-size: 14px;
+        color: #ccc;
+        font-size: 13px;
         cursor: pointer;
         text-align: center;
         z-index: 2;
-        border-radius: 4px;
-        box-shadow: 0 2px 5px #000;
+        border-radius: 2px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.8);
         transition: 0.2s;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
       }
       .focus-node:hover {
         transform: scale(1.05);
         z-index: 10;
         border-color: #fff;
+        box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
       }
       .focus-node.completed {
         border-color: var(--hl);
-        background: #004d40;
+        background: #00332c;
+        color: #80cbc4;
       }
       .focus-node.available {
         border-color: var(--warn);
-        box-shadow: 0 0 15px rgba(253, 216, 53, 0.2);
+        background: #2a2510;
+        box-shadow: 0 0 10px rgba(253, 216, 53, 0.2);
       }
       .focus-node.locked {
         opacity: 0.4;
         filter: grayscale(1);
         pointer-events: none;
+      }
+      .focus-node.exclusive-locked {
+        border-color: #d32f2f;
+        opacity: 0.6;
+        filter: grayscale(1);
+        pointer-events: none;
+        background: #300;
+      }
+
+      .focus-title {
+        font-weight: bold;
+        font-size: 15px;
+        margin-bottom: 5px;
+        color: #fff;
+      }
+      .focus-desc {
+        font-size: 12px;
+        color: #888;
+        margin-bottom: 5px;
+      }
+      .focus-cost {
+        font-size: 11px;
+        color: #666;
       }
       .focus-lines-svg {
         position: absolute;
@@ -291,7 +289,184 @@
         height: 100%;
       }
 
-      /* Designer */
+      /* === TNO風スーパーイベント (日本語版) === */
+      #super-event-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.85);
+        z-index: 20000;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        backdrop-filter: blur(5px);
+      }
+      .se-container {
+        width: 650px;
+        height: 500px;
+        background: #000;
+        border: 4px solid #e0e0e0;
+        position: relative;
+        box-shadow: 0 0 60px rgba(255, 255, 255, 0.15);
+        display: flex;
+        flex-direction: column;
+      }
+      .se-scanlines {
+        position: absolute;
+        inset: 0;
+        background: repeating-linear-gradient(
+          transparent 0px,
+          transparent 2px,
+          rgba(0, 0, 0, 0.5) 4px
+        );
+        pointer-events: none;
+        opacity: 0.4;
+        z-index: 5;
+        animation: flicker 0.15s infinite;
+      }
+      @keyframes flicker {
+        0% {
+          opacity: 0.38;
+        }
+        50% {
+          opacity: 0.42;
+        }
+        100% {
+          opacity: 0.38;
+        }
+      }
+
+      .se-image-area {
+        height: 300px;
+        background: #222;
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-bottom: 2px solid #fff;
+      }
+      .se-title-box {
+        background: #000;
+        color: #fff;
+        padding: 10px 0;
+        border-top: 2px solid #fff;
+        border-bottom: 2px solid #fff;
+        margin-top: -30px;
+        z-index: 10;
+        width: 80%;
+        text-align: center;
+        margin-left: 10%;
+        position: relative;
+      }
+      .se-title {
+        font-family: "MS Mincho", "Hiragino Mincho ProN", serif;
+        font-size: 32px;
+        font-weight: 900;
+        letter-spacing: 5px;
+        text-shadow: 0 0 10px #fff;
+      }
+
+      .se-quote-box {
+        flex: 1;
+        padding: 20px 40px;
+        color: #fff;
+        font-family: "MS Mincho", "Hiragino Mincho ProN", serif;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+      }
+      .se-quote {
+        font-size: 18px;
+        margin-bottom: 15px;
+        color: #ddd;
+        line-height: 1.4;
+        font-style: italic;
+      }
+      .se-author {
+        font-size: 14px;
+        color: #888;
+        align-self: flex-end;
+      }
+
+      .se-btn {
+        width: 100%;
+        padding: 15px;
+        background: #fff;
+        color: #000;
+        border: none;
+        font-family: "MS Mincho", "Hiragino Mincho ProN", serif;
+        font-weight: 900;
+        font-size: 20px;
+        cursor: pointer;
+        transition: 0.2s;
+        border-top: 2px solid #888;
+      }
+      .se-btn:hover {
+        background: #ccc;
+        letter-spacing: 3px;
+      }
+
+      /* === その他UI === */
+      .btn {
+        width: 100%;
+        padding: 10px;
+        background: linear-gradient(to bottom, #3a3a3a, #252525);
+        border: 1px solid #444;
+        color: #fff;
+        cursor: pointer;
+        margin-bottom: 10px;
+        border-radius: 2px;
+        font-weight: bold;
+        text-shadow: 0 1px 2px #000;
+        box-shadow: 0 2px 0 #111;
+        transition: 0.1s;
+      }
+      .btn:hover {
+        filter: brightness(1.2);
+      }
+      .btn-green {
+        background: linear-gradient(to bottom, #2e7d32, #1b5e20);
+        border-color: #1b5e20;
+      }
+      .btn-red {
+        background: linear-gradient(to bottom, #c62828, #b71c1c);
+        border-color: #b71c1c;
+      }
+
+      .modal {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 100;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        backdrop-filter: blur(4px);
+      }
+      .modal-win {
+        width: 90%;
+        max-width: 1200px;
+        height: 85%;
+        background: #1a1a1a;
+        border: 1px solid #444;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 20px 60px #000;
+        border-radius: 4px;
+        overflow: hidden;
+      }
+      .modal-head {
+        padding: 10px 20px;
+        background: #252525;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #333;
+      }
+
+      /* デザイナー */
       .ds-layout {
         display: flex;
         height: 100%;
@@ -321,13 +496,6 @@
         border-radius: 5px;
         border: 1px solid #333;
       }
-      .ds-grid-label {
-        grid-column: 1/-1;
-        font-size: 12px;
-        color: #888;
-        text-align: center;
-        margin-bottom: 5px;
-      }
       .slot {
         width: 60px;
         height: 60px;
@@ -342,50 +510,10 @@
         border-radius: 3px;
         transition: 0.1s;
       }
-      .slot:hover {
-        border-color: #fff;
-        background: #444;
-      }
       .slot.filled {
         border-style: solid;
         border-color: var(--hl);
         background: #2b2b2b;
-      }
-      .slot .rm {
-        position: absolute;
-        top: -6px;
-        right: -6px;
-        background: #d32f2f;
-        color: #fff;
-        width: 16px;
-        height: 16px;
-        font-size: 12px;
-        border-radius: 50%;
-        display: none;
-        align-items: center;
-        justify-content: center;
-        box-shadow: 0 1px 2px #000;
-      }
-      .slot:hover .rm {
-        display: flex;
-      }
-      .stat-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 8px;
-        width: 100%;
-      }
-      .stat-row {
-        display: flex;
-        justify-content: space-between;
-        font-size: 13px;
-        padding: 4px 8px;
-        background: #2a2a2a;
-        border-radius: 2px;
-      }
-      .stat-val {
-        font-weight: bold;
-        color: #fff;
       }
       .unit-opt {
         padding: 8px;
@@ -404,18 +532,18 @@
         border-color: #666;
         transform: translateX(3px);
       }
-      .unit-opt-icon {
-        font-size: 18px;
-        width: 30px;
-        text-align: center;
-      }
 
-      /* Misc */
+      :root {
+        --hl: #00bcd4;
+        --warn: #ffca28;
+        --danger: #ef5350;
+        --good: #66bb6a;
+      }
       #news-feed {
         position: absolute;
         top: 15px;
         right: 15px;
-        width: 280px;
+        width: 300px;
         pointer-events: none;
         display: flex;
         flex-direction: column;
@@ -423,15 +551,14 @@
         z-index: 50;
       }
       .news {
-        background: rgba(20, 20, 20, 0.9);
+        background: rgba(20, 20, 20, 0.95);
         color: #fff;
-        padding: 10px 15px;
+        padding: 12px 15px;
         border-left: 4px solid #aaa;
         font-size: 13px;
-        border-radius: 3px;
+        border-radius: 2px;
         animation: slideIn 0.3s;
-        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5);
-        backdrop-filter: blur(5px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
       }
       @keyframes slideIn {
         from {
@@ -442,176 +569,6 @@
         }
       }
 
-      :root {
-        --hl: #00bcd4;
-        --warn: #ffca28;
-        --danger: #ef5350;
-        --good: #66bb6a;
-      }
-      #select-box {
-        position: absolute;
-        border: 1px solid #fff;
-        background: rgba(255, 255, 255, 0.1);
-        display: none;
-        pointer-events: none;
-        z-index: 10;
-      }
-      .sb-profile {
-        display: flex;
-        align-items: center;
-        margin-bottom: 20px;
-        background: #333;
-        padding: 15px;
-        border-radius: 5px;
-      }
-      .sb-portrait-wrapper {
-        font-size: 50px;
-        margin-right: 15px;
-        background: #444;
-        width: 70px;
-        height: 70px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 5px;
-      }
-      .focus-btn-custom {
-        position: relative;
-        height: 60px;
-        text-align: left;
-        padding-left: 15px;
-      }
-      .focus-caption {
-        font-size: 12px;
-        color: #aaa;
-      }
-      .focus-name {
-        font-weight: bold;
-        font-size: 14px;
-      }
-      .focus-bar-bg {
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        height: 4px;
-        width: 100%;
-        background: #222;
-      }
-      .focus-bar-progress {
-        height: 100%;
-        width: 0;
-        background: var(--warn);
-        transition: 0.2s;
-      }
-      .side-stats-info {
-        margin-top: 20px;
-        font-size: 13px;
-        color: #aaa;
-      }
-      .danger-val {
-        color: var(--danger);
-        font-weight: bold;
-      }
-      .white-val {
-        color: #fff;
-      }
-      .army-template-box {
-        background: #333;
-        padding: 10px;
-        border-radius: 5px;
-        margin-bottom: 15px;
-        border: 1px solid #444;
-      }
-      .army-tmpl-header {
-        font-size: 12px;
-        color: #aaa;
-        margin-bottom: 8px;
-        display: flex;
-        justify-content: space-between;
-      }
-      .edit-link {
-        color: var(--hl);
-        cursor: pointer;
-      }
-      .army-stats-grid {
-        font-size: 11px;
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 5px;
-        color: #ddd;
-      }
-      .diplo-placeholder {
-        padding: 40px 20px;
-        text-align: center;
-        color: #666;
-        border: 2px dashed #333;
-        border-radius: 10px;
-      }
-      .modal-title-primary {
-        font-size: 18px;
-        font-weight: bold;
-        color: #ddd;
-      }
-      .designer-modal-window {
-        width: 1000px;
-        height: 800px;
-      }
-      .designer-xp-display {
-        font-size: 12px;
-        background: #444;
-        padding: 2px 8px;
-        border-radius: 10px;
-      }
-      .designer-main-content {
-        width: 100%;
-        max-width: 500px;
-      }
-      .designer-stats-box {
-        width: 100%;
-        max-width: 500px;
-        background: #222;
-        padding: 15px;
-        border-radius: 5px;
-        margin-top: 10px;
-        border: 1px solid #333;
-      }
-      .designer-stats-header {
-        font-size: 12px;
-        color: #aaa;
-        margin-bottom: 5px;
-        border-bottom: 1px solid #444;
-      }
-      .designer-save-button {
-        margin-top: 20px;
-        width: 200px;
-      }
-      #loading-overlay {
-        position: fixed;
-        inset: 0;
-        background: #111;
-        z-index: 9999;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        color: #fff;
-      }
-      .spinner {
-        width: 40px;
-        height: 40px;
-        border: 4px solid #333;
-        border-top-color: var(--hl);
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-        margin-bottom: 20px;
-      }
-      @keyframes spin {
-        to {
-          transform: rotate(360deg);
-        }
-      }
-
-      /* Start Screen */
       #start-screen {
         position: fixed;
         inset: 0;
@@ -621,16 +578,6 @@
         flex-direction: column;
         align-items: center;
         padding: 50px;
-      }
-      .start-title {
-        font-size: 36px;
-        font-weight: bold;
-        margin-bottom: 10px;
-        color: var(--hl);
-      }
-      .start-subtitle {
-        color: #aaa;
-        margin-bottom: 40px;
       }
       .country-grid {
         display: grid;
@@ -657,44 +604,125 @@
         border-color: var(--hl);
         transform: translateY(-5px);
       }
-      .c-flag {
-        font-size: 40px;
-        margin-bottom: 10px;
+
+      .sb-profile {
+        display: flex;
+        align-items: center;
+        margin-bottom: 20px;
+        background: #333;
+        padding: 15px;
+        border-radius: 5px;
       }
-      .c-name {
-        font-weight: bold;
-        text-align: center;
+      .focus-btn-custom {
+        position: relative;
+        height: 60px;
+        text-align: left;
+        padding-left: 15px;
       }
-      .c-info {
-        font-size: 11px;
-        color: #888;
-        margin-top: 5px;
-        text-align: center;
+      .focus-bar-bg {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        height: 4px;
+        width: 100%;
+        background: #222;
       }
-      .special-tag {
-        color: var(--warn);
-        font-size: 10px;
-        margin-top: 2px;
-        font-weight: bold;
+      .focus-bar-progress {
+        height: 100%;
+        width: 0;
+        background: var(--warn);
+        transition: 0.2s;
+      }
+      #select-box {
+        position: absolute;
+        border: 1px solid #fff;
+        background: rgba(255, 255, 255, 0.1);
+        display: none;
+        pointer-events: none;
+        z-index: 10;
+      }
+      #loading-overlay {
+        position: fixed;
+        inset: 0;
+        background: #111;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+      }
+      .spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid #333;
+        border-top-color: var(--hl);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-bottom: 20px;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
       }
     </style>
   </head>
   <body>
-    <div id="loading-overlay">
-      <div class="spinner"></div>
-      <div id="loading-text">Loading Map Data...</div>
+    <!-- TNO スーパーイベント (日本語版) -->
+    <div id="super-event-overlay">
+      <div class="se-container">
+        <div class="se-scanlines"></div>
+        <div class="se-image-area" id="se-img-box">
+          <div
+            style="font-size: 120px; opacity: 0.3; filter: blur(2px)"
+            id="se-icon"
+          >
+            ⚔️
+          </div>
+          <div class="se-title-box">
+            <div class="se-title" id="se-title">大東亜戦争勃発</div>
+          </div>
+        </div>
+        <div class="se-quote-box">
+          <div class="se-quote" id="se-quote">
+            「賽は投げられた。もはや後戻りはできない。」
+          </div>
+          <div class="se-author" id="se-author">- 指導者</div>
+        </div>
+        <button class="se-btn" onclick="SuperEvent.close()" id="se-btn-text">
+          冷静ヲ保テ。
+        </button>
+      </div>
     </div>
 
+    <!-- ローディング -->
+    <div id="loading-overlay">
+      <div class="spinner"></div>
+      <div id="loading-text">地図データを読み込み中...</div>
+    </div>
+
+    <!-- スタート画面 -->
     <div id="start-screen">
-      <div class="start-title">47都道府県</div>
-      <div class="start-subtitle">
-        プレイする国家を選択 (Canvas High Performance)
+      <div
+        style="
+          font-size: 36px;
+          font-weight: bold;
+          margin-bottom: 10px;
+          color: var(--hl);
+        "
+      >
+        AI Strategy Game: Redux
+      </div>
+      <div style="color: #aaa; margin-bottom: 40px">
+        プレイする国家(都道府県)を選択してください
       </div>
       <div id="country-list" class="country-grid"></div>
     </div>
 
     <div id="select-box"></div>
 
+    <!-- トップバー -->
     <div id="topbar">
       <div class="flag" onclick="UI.toggleSidebar()" id="player-flag">🏳️</div>
       <div class="res-grp">
@@ -739,27 +767,32 @@
       </div>
     </div>
 
+    <!-- メインレイアウト -->
     <div id="game-layout">
+      <!-- サイドバー -->
       <div id="sidebar">
         <div class="tabs">
           <div class="tab active" onclick="UI.tab('main')">国家</div>
           <div class="tab" onclick="UI.tab('army')">軍事</div>
           <div class="tab" onclick="UI.tab('diplo')">外交</div>
         </div>
+
+        <!-- 国家タブ -->
         <div id="v-main" class="view active">
           <div class="sb-profile">
             <div class="sb-portrait-wrapper" id="sb-portrait">?</div>
             <div>
-              <div class="focus-name" id="sb-name">Country</div>
-              <div class="focus-caption" id="sb-ideology">Prefecture</div>
+              <div style="font-weight: bold; font-size: 14px" id="sb-name">
+                Country
+              </div>
+              <div style="font-size: 12px; color: #aaa" id="sb-ideology">
+                Prefecture
+              </div>
             </div>
           </div>
           <button class="btn focus-btn-custom" onclick="UI.openFocusTree()">
-            <span class="focus-caption">国家方針</span><br /><span
-              id="sb-focus-curr"
-              class="focus-name"
-              >選択してください</span
-            >
+            <span class="focus-caption">国家方針</span><br />
+            <span id="sb-focus-curr" class="focus-name">選択してください</span>
             <div class="focus-bar-bg">
               <div id="sb-focus-bar" class="focus-bar-progress"></div>
             </div>
@@ -769,30 +802,63 @@
             style="margin-top: 10px"
             onclick="Game.buildFactory()"
           >
-            <span style="font-size: 16px">工場建設</span><br /><span
-              style="font-size: 11px; font-weight: normal"
+            <span style="font-size: 16px">工場建設</span><br />
+            <span style="font-size: 11px; font-weight: normal"
               >政治力:50, 建設期間:10日</span
             >
           </button>
-          <div class="side-stats-info">
+          <div style="margin-top: 20px; font-size: 13px; color: #aaa">
             <div>
-              世界緊張度: <span id="val-wt" class="danger-val">0%</span>
+              世界緊張度:
+              <span id="val-wt" style="color: var(--danger); font-weight: bold"
+                >0%</span
+              >
             </div>
-            <div>工場数: <span id="res-fac" class="white-val">0</span></div>
+            <div>工場数: <span id="res-fac" style="color: #fff">0</span></div>
           </div>
         </div>
+
+        <!-- 軍事タブ -->
         <div id="v-army" class="view">
-          <div class="army-template-box">
-            <div class="army-tmpl-header">
-              <span>現在の師団テンプレート</span
-              ><span class="edit-link" onclick="UI.openDesigner()">[編集]</span>
+          <div
+            style="
+              background: #333;
+              padding: 10px;
+              border-radius: 5px;
+              margin-bottom: 15px;
+              border: 1px solid #444;
+            "
+          >
+            <div
+              style="
+                font-size: 12px;
+                color: #aaa;
+                margin-bottom: 8px;
+                display: flex;
+                justify-content: space-between;
+              "
+            >
+              <span>現在の師団テンプレート</span>
+              <span
+                style="color: var(--hl); cursor: pointer"
+                onclick="UI.openDesigner()"
+                >[編集]</span
+              >
             </div>
-            <div id="army-tmpl-stats" class="army-stats-grid"></div>
+            <div
+              id="army-tmpl-stats"
+              style="
+                font-size: 11px;
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 5px;
+                color: #ddd;
+              "
+            ></div>
           </div>
           <button class="btn btn-green" onclick="Game.recruit()">
-            <span style="font-size: 16px">師団徴兵</span><br /><span
-              style="font-size: 11px; font-weight: normal"
-              id="recruit-cost"
+            <span style="font-size: 16px">師団徴兵</span><br />
+            <span style="font-size: 11px; font-weight: normal" id="recruit-cost"
               >人的:1000 装備:100</span
             >
           </button>
@@ -812,10 +878,24 @@
             <div class="focus-caption">
               総師団数: <span id="army-count">0</span>
             </div>
+            <div class="focus-caption">
+              最大師団数(1国): <span id="army-cap">50</span>
+            </div>
           </div>
         </div>
+
+        <!-- 外交タブ -->
         <div id="v-diplo" class="view">
-          <div id="diplo-msg" class="diplo-placeholder">
+          <div
+            id="diplo-msg"
+            style="
+              padding: 40px 20px;
+              text-align: center;
+              color: #666;
+              border: 2px dashed #333;
+              border-radius: 10px;
+            "
+          >
             地図上の国を<br />クリックしてください
           </div>
           <div id="diplo-content" style="display: none">
@@ -831,13 +911,14 @@
               "
             >
               <div class="focus-caption">
-                陣営: <span id="dp-faction" class="white-val">なし</span>
+                陣営: <span id="dp-faction" style="color: #fff">なし</span>
               </div>
             </div>
             <div
               id="dp-war-status"
-              class="danger-val"
               style="
+                color: var(--danger);
+                font-weight: bold;
                 margin-bottom: 15px;
                 display: none;
                 text-align: center;
@@ -858,20 +939,20 @@
         </div>
       </div>
 
+      <!-- マップ -->
       <div id="map-wrap">
-        <!-- SVG Map for Land -->
-        <svg id="game-svg"></svg>
-        <!-- Canvas for Units (Performance Booster) -->
-        <canvas id="unit-canvas"></canvas>
         <div id="news-feed"></div>
       </div>
     </div>
 
+    <!-- モーダル: 国家方針 (超大規模 + ドラッグスクロール) -->
     <div id="focus-modal" class="modal">
       <div class="modal-win">
         <div class="modal-head">
-          <span class="modal-title-primary">国家方針ツリー</span
-          ><button
+          <span style="font-size: 18px; font-weight: bold; color: #ddd"
+            >国家方針ツリー (ドラッグして移動)</span
+          >
+          <button
             class="spd-btn"
             style="font-size: 20px"
             onclick="UI.closeFocusTree()"
@@ -879,7 +960,7 @@
             ×
           </button>
         </div>
-        <div class="modal-body">
+        <div class="modal-body" id="focus-scroll-area">
           <div id="focus-canvas">
             <svg id="focus-lines" class="focus-lines-svg"></svg>
             <div id="focus-nodes"></div>
@@ -887,13 +968,22 @@
         </div>
       </div>
     </div>
+
+    <!-- モーダル: 師団設計 -->
     <div id="design-modal" class="modal">
-      <div class="modal-win designer-modal-window">
+      <div class="modal-win" style="width: 1000px; height: 800px">
         <div class="modal-head">
           <div style="display: flex; align-items: center; gap: 10px">
             <span style="font-size: 18px; font-weight: bold"
               >師団編成デザイナー</span
-            ><span class="designer-xp-display"
+            >
+            <span
+              style="
+                font-size: 12px;
+                background: #444;
+                padding: 2px 8px;
+                border-radius: 10px;
+              "
               >★ <span id="ds-xp">0</span> XP</span
             >
           </div>
@@ -908,81 +998,133 @@
         <div class="ds-layout">
           <div class="ds-panel">
             <div
-              class="ds-grid-label"
-              style="font-weight: bold; margin-bottom: 10px"
+              style="
+                font-size: 12px;
+                color: #888;
+                text-align: center;
+                margin-bottom: 5px;
+                font-weight: bold;
+              "
             >
               戦闘大隊
             </div>
             <div id="opt-battalions"></div>
             <div
-              class="ds-grid-label"
-              style="font-weight: bold; margin: 20px 0 10px 0"
+              style="
+                font-size: 12px;
+                color: #888;
+                text-align: center;
+                margin: 20px 0 5px 0;
+                font-weight: bold;
+              "
             >
               支援中隊
             </div>
             <div id="opt-support"></div>
           </div>
           <div class="ds-main">
-            <div class="designer-main-content">
+            <div style="width: 100%; max-width: 500px">
               <div class="ds-grid">
-                <div class="ds-grid-label">主力大隊 (最大6)</div>
+                <div
+                  style="
+                    grid-column: 1/-1;
+                    font-size: 12px;
+                    color: #888;
+                    text-align: center;
+                    margin-bottom: 5px;
+                  "
+                >
+                  主力大隊 (最大6)
+                </div>
                 <div id="grid-bat" style="display: contents"></div>
               </div>
               <div
                 class="ds-grid"
                 style="grid-template-columns: repeat(3, 1fr)"
               >
-                <div class="ds-grid-label">支援中隊 (最大3)</div>
+                <div
+                  style="
+                    grid-column: 1/-1;
+                    font-size: 12px;
+                    color: #888;
+                    text-align: center;
+                    margin-bottom: 5px;
+                  "
+                >
+                  支援中隊 (最大3)
+                </div>
                 <div id="grid-sup" style="display: contents"></div>
               </div>
             </div>
-            <div class="designer-stats-box">
-              <div class="designer-stats-header">予測ステータス</div>
-              <div class="stat-grid">
-                <div class="stat-row">
-                  <span>対人攻撃 (Soft)</span
+            <div
+              style="
+                width: 100%;
+                max-width: 500px;
+                background: #222;
+                padding: 15px;
+                border-radius: 5px;
+                margin-top: 10px;
+                border: 1px solid #333;
+              "
+            >
+              <div
+                style="
+                  font-size: 12px;
+                  color: #aaa;
+                  margin-bottom: 5px;
+                  border-bottom: 1px solid #444;
+                "
+              >
+                予測ステータス
+              </div>
+              <div
+                style="
+                  display: grid;
+                  grid-template-columns: 1fr 1fr;
+                  gap: 8px;
+                  width: 100%;
+                  font-size: 13px;
+                "
+              >
+                <div style="display: flex; justify-content: space-between">
+                  <span>対人攻撃</span
                   ><span
-                    class="stat-val"
-                    style="color: var(--warn)"
+                    style="font-weight: bold; color: var(--warn)"
                     id="ds-atk-s"
                     >0</span
                   >
                 </div>
-                <div class="stat-row">
-                  <span>対甲攻撃 (Hard)</span
+                <div style="display: flex; justify-content: space-between">
+                  <span>対甲攻撃</span
                   ><span
-                    class="stat-val"
-                    style="color: var(--danger)"
+                    style="font-weight: bold; color: var(--danger)"
                     id="ds-atk-h"
                     >0</span
                   >
                 </div>
-                <div class="stat-row">
-                  <span>防御 (Def)</span
-                  ><span class="stat-val" style="color: #42a5f5" id="ds-def"
+                <div style="display: flex; justify-content: space-between">
+                  <span>防御</span
+                  ><span style="font-weight: bold; color: #42a5f5" id="ds-def"
                     >0</span
                   >
                 </div>
-                <div class="stat-row">
-                  <span>突破 (Brk)</span
-                  ><span class="stat-val" style="color: #ffa726" id="ds-brk"
+                <div style="display: flex; justify-content: space-between">
+                  <span>装甲</span
+                  ><span style="font-weight: bold; color: #bdbdbd" id="ds-arm"
                     >0</span
                   >
                 </div>
-                <div class="stat-row">
-                  <span>装甲 (Arm)</span
-                  ><span class="stat-val" style="color: #bdbdbd" id="ds-arm"
+                <div style="display: flex; justify-content: space-between">
+                  <span>コスト</span
+                  ><span style="font-weight: bold; color: #fff" id="ds-cost"
                     >0</span
                   >
-                </div>
-                <div class="stat-row">
-                  <span>コスト (IC)</span
-                  ><span class="stat-val" id="ds-cost">0</span>
                 </div>
               </div>
             </div>
             <button
-              class="btn btn-green designer-save-button"
+              class="btn btn-green"
+              style="margin-top: 20px; width: 200px"
               onclick="Designer.save()"
             >
               保存 (コスト: 10 XP)
@@ -993,6 +1135,7 @@
     </div>
 
     <script>
+      // ユーティリティ
       const $ = (id) => document.getElementById(id);
       const $c = (t, c) => {
         const e = document.createElement(t);
@@ -1005,8 +1148,40 @@
           : n >= 1e3
           ? (n / 1e3).toFixed(1) + "K"
           : n;
-      const randCol = () => `hsl(${Math.random() * 360}, 60%, 40%)`;
 
+      // 配色
+      let colorHue = Math.random();
+      const nextColor = () => {
+        colorHue = (colorHue + 0.618033988749895) % 1;
+        const h = Math.floor(colorHue * 360);
+        return `hsl(${h}, 65%, 45%)`;
+      };
+
+      // スーパーイベント (日本語版)
+      const SuperEvent = {
+        overlay: $("super-event-overlay"),
+        title: $("se-title"),
+        quote: $("se-quote"),
+        author: $("se-author"),
+        btnText: $("se-btn-text"),
+        imgBox: $("se-img-box"),
+        icon: $("se-icon"),
+
+        trigger: function (title, quote, author, iconStr, color, btnText) {
+          this.title.innerText = title;
+          this.quote.innerHTML = quote.replace(/\n/g, "<br>");
+          this.author.innerText = "- " + author;
+          this.icon.innerText = iconStr || "⚔️";
+          this.btnText.innerText = btnText || "残ルハ我ラノミ。";
+          this.imgBox.style.background = color || "#333";
+          this.overlay.style.display = "flex";
+        },
+        close: function () {
+          this.overlay.style.display = "none";
+        },
+      };
+
+      // データベース: ユニット & 国家方針
       const DB = {
         UnitTypes: {
           inf: {
@@ -1015,19 +1190,19 @@
             type: "bat",
             sa: 12,
             ha: 2,
-            def: 22,
+            def: 25,
             brk: 5,
             arm: 0,
             prc: 5,
             org: 60,
             spd: 4.0,
-            cost: 100,
+            cost: 300,
           },
           art: {
             name: "砲兵",
             icon: "💥",
             type: "bat",
-            sa: 40,
+            sa: 45,
             ha: 5,
             def: 5,
             brk: 5,
@@ -1035,49 +1210,63 @@
             prc: 5,
             org: 10,
             spd: 3.5,
-            cost: 300,
+            cost: 700,
           },
           tank: {
             name: "戦車",
             icon: "🚜",
             type: "bat",
-            sa: 25,
-            ha: 30,
+            sa: 30,
+            ha: 40,
             def: 15,
-            brk: 40,
-            arm: 40,
-            prc: 40,
+            brk: 55,
+            arm: 50,
+            prc: 45,
             org: 30,
-            spd: 7.0,
-            cost: 800,
+            spd: 8.0,
+            cost: 3000,
           },
           mot: {
             name: "自動車",
             icon: "🚚",
             type: "bat",
-            sa: 12,
-            ha: 2,
-            def: 18,
-            brk: 15,
-            arm: 2,
-            prc: 5,
+            sa: 15,
+            ha: 3,
+            def: 20,
+            brk: 20,
+            arm: 5,
+            prc: 8,
             org: 55,
             spd: 12.0,
-            cost: 350,
+            cost: 1000,
+          },
+          mech: {
+            name: "機械化",
+            icon: "🚙",
+            type: "bat",
+            sa: 22,
+            ha: 15,
+            def: 35,
+            brk: 30,
+            arm: 25,
+            prc: 20,
+            org: 50,
+            spd: 10.0,
+            cost: 1800,
           },
           bike: {
             name: "自転車",
             icon: "🚲",
             type: "bat",
-            sa: 12,
+            sa: 14,
             ha: 2,
-            def: 18,
-            brk: 10,
+            def: 20,
+            brk: 12,
             arm: 0,
             prc: 5,
             org: 55,
-            spd: 8.0,
-            cost: 150,
+            spd: 9.0,
+            cost: 400,
           },
           eng: {
             name: "工兵",
@@ -1085,19 +1274,19 @@
             type: "sup",
             sa: 5,
             ha: 2,
-            def: 15,
+            def: 25,
             brk: 5,
             arm: 0,
             prc: 5,
             org: 20,
             spd: 0,
-            cost: 200,
+            cost: 500,
           },
           rec: {
             name: "偵察",
             icon: "🔭",
             type: "sup",
-            sa: 3,
+            sa: 4,
             ha: 1,
             def: 5,
             brk: 5,
@@ -1105,7 +1294,7 @@
             prc: 0,
             org: 10,
             spd: 1.1,
-            cost: 150,
+            cost: 400,
           },
           sup_art: {
             name: "支援砲",
@@ -1119,365 +1308,425 @@
             prc: 5,
             org: 0,
             spd: 0,
-            cost: 250,
+            cost: 600,
           },
         },
-        FocusTree: {
-          GENERIC: [
-            {
-              id: "gen_pol",
-              x: 400,
-              y: 50,
-              t: "政治的努力",
-              d: "政治力+50",
-              cost: 100,
-              req: [],
-              eff: (c) => {
-                c.pp += 50;
-              },
-            },
-            {
-              id: "gen_ind",
-              x: 200,
-              y: 200,
-              t: "産業開発",
-              d: "工場+1",
-              cost: 300,
-              req: ["gen_pol"],
-              eff: (c) => {
-                c.fac++;
-                UI.notify("産業開発により工場が建設されました", "success");
-              },
-            },
-            {
-              id: "gen_mil",
-              x: 600,
-              y: 200,
-              t: "軍備拡張",
-              d: "XP+30, 装備+500",
-              cost: 300,
-              req: ["gen_pol"],
-              eff: (c) => {
-                c.xp += 30;
-                c.eq += 500;
-              },
-            },
-            {
-              id: "gen_doc",
-              x: 600,
-              y: 350,
-              t: "ドクトリン研究",
-              d: "全軍防御+10%",
-              cost: 500,
-              req: ["gen_mil"],
-              eff: (c) => {
-                c.territoryDefBonus = (c.territoryDefBonus || 0) + 0.1;
-              },
-            },
-            {
-              id: "gen_dip",
-              x: 400,
-              y: 400,
-              t: "近隣外交",
-              d: "政治力+30",
-              cost: 200,
-              req: ["gen_pol"],
-              eff: (c) => {
-                c.pp += 30;
-              },
-            },
-          ],
-          TOKYO: [
-            {
-              id: "tok_main",
-              x: 400,
-              y: 50,
-              t: "帝都復興計画",
-              d: "政治力+100, 安定度+10%",
-              cost: 100,
-              req: [],
-              eff: (c) => {
-                c.pp += 100;
-                c.st += 10;
-              },
-            },
-            {
-              id: "tok_mob",
-              x: 200,
-              y: 200,
-              t: "総動員体制",
-              d: "人的資源+50000",
-              cost: 250,
-              req: ["tok_main"],
-              eff: (c) => {
-                c.mp += 50000;
-              },
-            },
-            {
-              id: "tok_def",
-              x: 600,
-              y: 200,
-              t: "首都防衛構想",
-              d: "全軍防御+20%",
-              cost: 300,
-              req: ["tok_main"],
-              eff: (c) => {
-                c.territoryDefBonus = (c.territoryDefBonus || 0) + 0.2;
-              },
-            },
-            {
-              id: "tok_ind",
-              x: 400,
-              y: 350,
-              t: "関東工業地帯",
-              d: "工場+3",
-              cost: 400,
-              req: ["tok_main"],
-              eff: (c) => {
-                c.fac += 3;
-                UI.notify("関東工業地帯の整備により工場が増加", "success");
-              },
-            },
-            {
-              id: "tok_sup",
-              x: 400,
-              y: 500,
-              t: "覇権の確立",
-              d: "政治力+200, 攻撃+10%",
-              cost: 500,
-              req: ["tok_ind"],
-              eff: (c) => {
-                c.pp += 200;
-                c.atkBonus = (c.atkBonus || 0) + 0.1;
-              },
-            },
-          ],
-          OSAKA: [
-            {
-              id: "osa_main",
-              x: 400,
-              y: 50,
-              t: "大大阪産業計画",
-              d: "工場+2",
-              cost: 150,
-              req: [],
-              eff: (c) => {
-                c.fac += 2;
-              },
-            },
-            {
-              id: "osa_eco",
-              x: 200,
-              y: 200,
-              t: "商都の誇り",
-              d: "政治力+150",
-              cost: 200,
-              req: ["osa_main"],
-              eff: (c) => {
-                c.pp += 150;
-              },
-            },
-            {
-              id: "osa_mil",
-              x: 600,
-              y: 200,
-              t: "私設師団",
-              d: "装備+2000, 人的+10000",
-              cost: 300,
-              req: ["osa_main"],
-              eff: (c) => {
-                c.eq += 2000;
-                c.mp += 10000;
-              },
-            },
-            {
-              id: "osa_exp",
-              x: 400,
-              y: 350,
-              t: "関西経済圏",
-              d: "工場建設速度+50%",
-              cost: 400,
-              req: ["osa_eco", "osa_mil"],
-              eff: (c) => {
-                c.factoryBuildSpeedBonus =
-                  (c.factoryBuildSpeedBonus || 0) + 0.5;
-              },
-            },
-          ],
-          MIYAGI: [
-            {
-              id: "miy_main",
-              x: 400,
-              y: 50,
-              t: "奥州の覇者",
-              d: "政治力+80, 人的+10000",
-              cost: 120,
-              req: [],
-              eff: (c) => {
-                c.pp += 80;
-                c.mp += 10000;
-              },
-            },
-            {
-              id: "miy_agri",
-              x: 200,
-              y: 200,
-              t: "穀倉地帯の動員",
-              d: "人的資源+30000",
-              cost: 250,
-              req: ["miy_main"],
-              eff: (c) => {
-                c.mp += 30000;
-              },
-            },
-            {
-              id: "miy_sen",
-              x: 600,
-              y: 200,
-              t: "仙台工廠",
-              d: "工場+2, 装備+1000",
-              cost: 300,
-              req: ["miy_main"],
-              eff: (c) => {
-                c.fac += 2;
-                c.eq += 1000;
-              },
-            },
-            {
-              id: "miy_uni",
-              x: 400,
-              y: 350,
-              t: "東北統一作戦",
-              d: "全軍攻撃+15%",
-              cost: 400,
-              req: ["miy_agri", "miy_sen"],
-              eff: (c) => {
-                c.atkBonus = (c.atkBonus || 0) + 0.15;
-              },
-            },
-          ],
-          GUNMA: [
-            {
-              id: "gun_main",
-              x: 400,
-              y: 50,
-              t: "絶対国防圏",
-              d: "防御+15%",
-              cost: 100,
-              req: [],
-              eff: (c) => {
-                c.territoryDefBonus = (c.territoryDefBonus || 0) + 0.15;
-              },
-            },
-            {
-              id: "gun_res",
-              x: 200,
-              y: 200,
-              t: "山岳資源開発",
-              d: "工場+2",
-              cost: 250,
-              req: ["gun_main"],
-              eff: (c) => {
-                c.fac += 2;
-              },
-            },
-            {
-              id: "gun_spr",
-              x: 600,
-              y: 200,
-              t: "温泉保養",
-              d: "安定度+20%, 戦争協力度+10%",
-              cost: 200,
-              req: ["gun_main"],
-              eff: (c) => {
-                c.st += 20;
-                c.ws += 10;
-              },
-            },
-            {
-              id: "gun_tank",
-              x: 400,
-              y: 350,
-              t: "中島飛行機の遺産",
-              d: "装備生産+20%, XP+50",
-              cost: 400,
-              req: ["gun_res"],
-              eff: (c) => {
-                c.eqProdBonus = (c.eqProdBonus || 0) + 0.2;
-                c.xp += 50;
-              },
-            },
-          ],
-          HYOGO: [
-            {
-              id: "hyo_main",
-              x: 400,
-              y: 50,
-              t: "神戸港拡張",
-              d: "工場+1, 政治力+50",
-              cost: 100,
-              req: [],
-              eff: (c) => {
-                c.fac += 1;
-                c.pp += 50;
-              },
-            },
-            {
-              id: "hyo_trade",
-              x: 200,
-              y: 200,
-              t: "国際貿易",
-              d: "装備+3000",
-              cost: 250,
-              req: ["hyo_main"],
-              eff: (c) => {
-                c.eq += 3000;
-              },
-            },
-            {
-              id: "hyo_stl",
-              x: 600,
-              y: 200,
-              t: "製鉄所稼働",
-              d: "工場+2",
-              cost: 300,
-              req: ["hyo_main"],
-              eff: (c) => {
-                c.fac += 2;
-              },
-            },
-            {
-              id: "hyo_gate",
-              x: 400,
-              y: 350,
-              t: "日本の玄関口",
-              d: "政治力+200, 人的+20000",
-              cost: 400,
-              req: ["hyo_trade", "hyo_stl"],
-              eff: (c) => {
-                c.pp += 200;
-                c.mp += 20000;
-              },
-            },
-          ],
+        AITemplates: {
+          basic_inf: { bat: ["inf", "inf", "inf", "inf"], sup: ["eng"] },
+          strong_inf: {
+            bat: ["inf", "inf", "inf", "art"],
+            sup: ["eng", "sup_art"],
+          },
+          bike_div: { bat: ["bike", "bike", "bike", "bike"], sup: ["rec"] },
+          mot_div: {
+            bat: ["mot", "mot", "mot", "tank"],
+            sup: ["eng", "sup_art"],
+          },
+          mech_div: {
+            bat: ["mech", "mech", "mech", "tank"],
+            sup: ["eng", "rec"],
+          },
+          tank_div: {
+            bat: ["tank", "tank", "mot", "mot"],
+            sup: ["eng", "sup_art"],
+          },
+          elite_tank: {
+            bat: ["tank", "tank", "tank", "mech", "mech"],
+            sup: ["eng", "rec", "sup_art"],
+          },
         },
+        FocusTree: { GENERIC: [] },
         Terrain: {
-          sea: {
-            name: "海",
-            color: "#0d1b2a",
-            moveCost: 5,
-            impassable: false,
-            icon: "🌊",
-          },
+          sea: { name: "海", color: "#050a10", moveCost: 5, impassable: false },
           plains: {
             name: "平原",
-            color: "#8bc34a",
+            color: "#3e4e38",
             moveCost: 1,
             impassable: false,
-            icon: "🌾",
           },
         },
       };
+
+      // Focus Tree Generator
+      const FT = [];
+      const addF = (id, x, y, t, d, cost, req, eff, mut) =>
+        FT.push({ id, x, y, t, d, cost, req, eff, mut });
+
+      // 政治 (中央)
+      addF(
+        "pol_start",
+        1400,
+        50,
+        "県政の刷新",
+        "政治力+80",
+        70,
+        [],
+        (c) => (c.pp += 80)
+      );
+      addF(
+        "pol_council",
+        1400,
+        200,
+        "県議会の招集",
+        "安定度+5%",
+        70,
+        ["pol_start"],
+        (c) => (c.st += 5)
+      );
+
+      // 覇道ルート
+      addF(
+        "pol_auth",
+        1250,
+        350,
+        "覇道の追求",
+        "政治力+100, 排他: 王道",
+        100,
+        ["pol_council"],
+        (c) => {
+          c.pp += 100;
+          c.ws += 10;
+        },
+        ["pol_demo"]
+      );
+      addF(
+        "pol_auth_1",
+        1250,
+        500,
+        "中央集権化",
+        "政治力+150",
+        120,
+        ["pol_auth"],
+        (c) => (c.pp += 150)
+      );
+      addF(
+        "pol_auth_2",
+        1250,
+        650,
+        "軍国主義",
+        "人的+5000",
+        120,
+        ["pol_auth_1"],
+        (c) => (c.mp += 5000)
+      );
+      addF(
+        "pol_auth_3",
+        1250,
+        800,
+        "隣県への威圧",
+        "外交圧力強化",
+        140,
+        ["pol_auth_2"],
+        (c) => UI.notify("外交的圧力を強化しました")
+      );
+      addF(
+        "pol_auth_end",
+        1250,
+        1000,
+        "覇道の宣言",
+        "SE発生: 覇権確立",
+        200,
+        ["pol_auth_3"],
+        (c) => {
+          SuperEvent.trigger(
+            "覇権ノ確立",
+            "力コソガ正義デアル。弱者ニ生存ノ権利ナシ。",
+            "総統司令部",
+            "👑",
+            "#500",
+            "我ガ意ノママニ。"
+          );
+          c.ws = 100;
+          c.pp += 500;
+        }
+      );
+
+      // 王道ルート
+      addF(
+        "pol_demo",
+        1550,
+        350,
+        "王道の統治",
+        "安定+10%, 排他: 覇道",
+        100,
+        ["pol_council"],
+        (c) => {
+          c.st += 10;
+          c.pp += 50;
+        },
+        ["pol_auth"]
+      );
+      addF(
+        "pol_demo_1",
+        1550,
+        500,
+        "地方自治の尊重",
+        "安定+10%",
+        120,
+        ["pol_demo"],
+        (c) => (c.st += 10)
+      );
+      addF(
+        "pol_demo_2",
+        1550,
+        650,
+        "産業連携協定",
+        "工場+2",
+        140,
+        ["pol_demo_1"],
+        (c) => {
+          c.fac += 2;
+          UI.notify("協力により工場建設");
+        }
+      );
+      addF(
+        "pol_demo_3",
+        1550,
+        800,
+        "平和の祭典",
+        "安定+20%",
+        140,
+        ["pol_demo_2"],
+        (c) => {
+          c.st += 20;
+          SuperEvent.trigger(
+            "平和ノ祭典",
+            "戦イハ終ワッタ。今コソ繁栄ノ時ダ。",
+            "知事連合",
+            "🕊️",
+            "#284",
+            "永遠ノ平和ヲ。"
+          );
+        }
+      );
+
+      // 産業 (左)
+      addF(
+        "ind_start",
+        900,
+        200,
+        "産業開発計画",
+        "工場+1",
+        100,
+        ["pol_start"],
+        (c) => (c.fac += 1)
+      );
+      // 重工業
+      addF(
+        "ind_heavy_1",
+        800,
+        350,
+        "重工業化",
+        "工場+1",
+        100,
+        ["ind_start"],
+        (c) => (c.fac += 1)
+      );
+      addF(
+        "ind_heavy_2",
+        800,
+        500,
+        "コンビナート建設",
+        "工場+2",
+        150,
+        ["ind_heavy_1"],
+        (c) => (c.fac += 2)
+      );
+      addF(
+        "ind_heavy_3",
+        800,
+        650,
+        "資源採掘",
+        "装備+3000",
+        120,
+        ["ind_heavy_2"],
+        (c) => (c.eq += 3000)
+      );
+      addF(
+        "ind_nuc",
+        700,
+        850,
+        "原子力研究",
+        "研究完了",
+        300,
+        ["ind_heavy_3"],
+        (c) => UI.notify("原子力研究所が完成しました...")
+      );
+      // ハイテク
+      addF(
+        "ind_tech_1",
+        1000,
+        350,
+        "電子産業",
+        "建設速度+10%",
+        100,
+        ["ind_start"],
+        (c) =>
+          (c.factoryBuildSpeedBonus = (c.factoryBuildSpeedBonus || 0) + 0.1)
+      );
+      addF(
+        "ind_tech_2",
+        1000,
+        500,
+        "シリコン列島",
+        "工場+1, 建設+10%",
+        150,
+        ["ind_tech_1"],
+        (c) => {
+          c.fac += 1;
+          c.factoryBuildSpeedBonus += 0.1;
+        }
+      );
+      addF(
+        "ind_tech_3",
+        1000,
+        650,
+        "自動化工場",
+        "工場+3",
+        200,
+        ["ind_tech_2"],
+        (c) => (c.fac += 3)
+      );
+      addF(
+        "ind_cap",
+        1000,
+        850,
+        "首都改造計画",
+        "安定+15%, 工場+2",
+        200,
+        ["ind_tech_3"],
+        (c) => {
+          c.st += 15;
+          c.fac += 2;
+        }
+      );
+
+      // 軍事 (右)
+      addF(
+        "mil_start",
+        1900,
+        200,
+        "自衛隊の再編",
+        "XP+20",
+        80,
+        ["pol_start"],
+        (c) => (c.xp += 20)
+      );
+      // 機動戦
+      addF(
+        "mil_mob_1",
+        1800,
+        350,
+        "機動戦ドクトリン",
+        "突破+10%",
+        120,
+        ["mil_start"],
+        (c) => UI.notify("機動戦ドクトリン採用")
+      );
+      addF(
+        "mil_mob_2",
+        1800,
+        500,
+        "戦車部隊創設",
+        "装備+500, XP+50",
+        150,
+        ["mil_mob_1"],
+        (c) => {
+          c.eq += 500;
+          c.xp += 50;
+        }
+      );
+      addF(
+        "mil_mob_3",
+        1800,
+        650,
+        "電撃戦",
+        "全軍速度+10%(概念)",
+        150,
+        ["mil_mob_2"],
+        (c) => UI.notify("電撃戦理論の研究完了")
+      );
+      // 持久戦
+      addF(
+        "mil_def_1",
+        2000,
+        350,
+        "持久戦ドクトリン",
+        "防御+10%",
+        120,
+        ["mil_start"],
+        (c) => (c.territoryDefBonus = (c.territoryDefBonus || 0) + 0.1)
+      );
+      addF(
+        "mil_def_2",
+        2000,
+        500,
+        "要塞線建設",
+        "安定+5%",
+        150,
+        ["mil_def_1"],
+        (c) => (c.st += 5)
+      );
+      addF(
+        "mil_def_3",
+        2000,
+        650,
+        "国民皆兵",
+        "人的+20000",
+        150,
+        ["mil_def_2"],
+        (c) => (c.mp += 20000)
+      );
+      // 特殊
+      addF(
+        "mil_spec",
+        1900,
+        800,
+        "決戦兵器の開発",
+        "SE発生",
+        250,
+        ["mil_mob_3", "mil_def_3"],
+        (c) => {
+          c.fac += 2;
+          c.eq += 5000;
+          SuperEvent.trigger(
+            "決戦兵器",
+            "ソレハ全テヲ無ニ帰ス、悪魔ノ力。",
+            "技術本部",
+            "☢️",
+            "#000",
+            "世界ハ震エル。"
+          );
+        }
+      );
+
+      // 天下統一
+      addF(
+        "fin_unify",
+        1400,
+        1200,
+        "天下布武",
+        "全ステータス大幅上昇",
+        365,
+        ["pol_auth_end", "ind_cap", "mil_spec"],
+        (c) => {
+          c.pp += 1000;
+          c.st = 100;
+          c.ws = 100;
+          c.mp += 50000;
+          c.fac += 10;
+          SuperEvent.trigger(
+            "天下統一",
+            "戦乱ノ世ハ終ワリ、新タナ秩序ガ生マレル。",
+            "大総統",
+            "🗾",
+            "#b71c1c",
+            "万歳！万歳！"
+          );
+        }
+      );
+
+      DB.FocusTree.GENERIC = FT;
 
       const CapitalCoords = {
         P1: { lat: 43.064, lon: 141.347 },
@@ -1487,15 +1736,238 @@
         P23: { lat: 35.181, lon: 136.906 },
         P40: { lat: 33.606, lon: 130.418 },
       };
-      const CapitalCoordsByName = {
-        Hokkaido: { lat: 43.064, lon: 141.347 },
-        Tokyo: { lat: 35.689, lon: 139.692 },
-        Okinawa: { lat: 26.212, lon: 127.681 },
-        Osaka: { lat: 34.693, lon: 135.502 },
-        Aichi: { lat: 35.181, lon: 136.906 },
-        Fukuoka: { lat: 33.606, lon: 130.418 },
-      };
       const MapSys = { hexes: [] };
+
+      const UI = {
+        init: function () {
+          this.update();
+        },
+        update: function () {
+          const p = Game.countries[Game.player];
+          if (!p) return;
+          $("res-pp").innerText = ~~p.pp;
+          $("res-st").innerText = p.st + "%";
+          $("res-ws").innerText = p.ws + "%";
+          $("res-man").innerText = nFmt(p.mp);
+          $("res-fac").innerText = p.fac;
+          $("res-eq").innerText = nFmt(p.eq);
+          $("res-xp").innerText = ~~p.xp;
+          $("val-wt").innerText = Game.tension + "%";
+          $("player-flag").innerText = p.flag;
+          $("army-count").innerText = Game.units.filter(
+            (u) => u.tag === Game.player
+          ).length;
+          const ts = Game.calcStats(p.template);
+          $("army-tmpl-stats").innerHTML = `<span>⚔️ 軟:${ts.sa} 硬:${
+            ts.ha
+          }</span><span>🛡️ 防:${ts.def} 貫:${
+            ts.prc
+          }</span><span>🚜 装:${ts.arm.toFixed(0)}</span>`;
+          $("recruit-cost").innerText = `人的:1000 装備:${ts.cost.toFixed(0)}`;
+          if (p.focus) {
+            const pct = (p.focusProg / p.focus.cost) * 100;
+            $("sb-focus-curr").innerText = p.focus.t + " (" + ~~pct + "%)";
+            $("sb-focus-bar").style.width = pct + "%";
+          } else if (p.buildingFactory) {
+            const pct =
+              (p.buildingFactory.progress / p.buildingFactory.cost) * 100;
+            $("sb-focus-curr").innerText = `${
+              p.buildingFactory.name
+            }中... (${~~pct}%)`;
+            $("sb-focus-bar").style.width = pct + "%";
+          } else {
+            $("sb-focus-curr").innerText = "国家方針を選択";
+            $("sb-focus-bar").style.width = "0%";
+          }
+        },
+        updateSidebar: function () {
+          const t = Game.selected || Game.player;
+          const c = Game.countries[t];
+          if (!c) return;
+          $("sb-name").innerText = c.name;
+          $("sb-portrait").innerText = c.flag;
+          $("sb-ideology").innerText = "Prefecture";
+          const diploMsg = $("diplo-msg");
+          const diploContent = $("diplo-content");
+          if (Game.selected && Game.selected !== Game.player) {
+            diploMsg.style.display = "none";
+            diploContent.style.display = "block";
+            $("dp-name").innerText = c.name;
+            $("dp-faction").innerText = c.faction || "なし";
+            $("dp-war-status").style.display = Game.isWar(Game.player, t)
+              ? "block"
+              : "none";
+            $("btn-declare-war").disabled = Game.isAlly(Game.player, t);
+          } else {
+            diploMsg.style.display = "block";
+            diploContent.style.display = "none";
+          }
+        },
+        toggleSidebar: function () {
+          const sidebar = $("sidebar");
+          sidebar.style.display =
+            sidebar.style.display === "none" ? "flex" : "none";
+        },
+        tab: function (id) {
+          document
+            .querySelectorAll(".tab")
+            .forEach((e) => e.classList.remove("active"));
+          document
+            .querySelectorAll(".view")
+            .forEach((e) => e.classList.remove("active"));
+          event.target.classList.add("active");
+          $(`v-${id}`).classList.add("active");
+        },
+        openFocusTree: function () {
+          const p = Game.countries[Game.player];
+          if (!p) return;
+          const tree = DB.FocusTree.GENERIC;
+          $("focus-nodes").innerHTML = "";
+          $("focus-lines").innerHTML = "";
+          tree.forEach((f) => {
+            const el = $c("div", "focus-node");
+            el.style.left = f.x + "px";
+            el.style.top = f.y + "px";
+            el.innerHTML = `<div class="focus-title">${f.t}</div><div class="focus-desc">${f.d}</div><div class="focus-cost">(${f.cost} days)</div>`;
+            const comp = p.completedFocuses.includes(f.id);
+            const excluded =
+              f.mut && f.mut.some((m) => p.completedFocuses.includes(m));
+            const avail =
+              !comp &&
+              !excluded &&
+              f.req.every((r) => p.completedFocuses.includes(r));
+
+            if (comp) el.classList.add("completed");
+            else if (excluded) el.classList.add("exclusive-locked");
+            else if (
+              avail &&
+              !((p.focus && p.focus.id !== f.id) || p.buildingFactory)
+            ) {
+              el.classList.add("available");
+              el.onclick = () => Game.startFocus(f.id);
+            } else el.classList.add("locked");
+            if (p.focus && p.focus.id === f.id) el.classList.add("available");
+            $("focus-nodes").appendChild(el);
+            f.req.forEach((rid) => {
+              const par = tree.find((x) => x.id === rid);
+              if (par) {
+                const l = document.createElementNS(
+                  "http://www.w3.org/2000/svg",
+                  "line"
+                );
+                l.setAttribute("x1", par.x + 120);
+                l.setAttribute("y1", par.y + 110);
+                l.setAttribute("x2", f.x + 120);
+                l.setAttribute("y2", f.y);
+                l.setAttribute("stroke", comp ? "var(--hl)" : "#555");
+                l.setAttribute("stroke-width", "2");
+                $("focus-lines").appendChild(l);
+              }
+            });
+            // 排他線
+            if (f.mut)
+              f.mut.forEach((mid) => {
+                const mNode = tree.find((x) => x.id === mid);
+                if (mNode && mNode.x > f.x) {
+                  const l2 = document.createElementNS(
+                    "http://www.w3.org/2000/svg",
+                    "line"
+                  );
+                  l2.setAttribute("x1", f.x + 200);
+                  l2.setAttribute("y1", f.y + 40);
+                  l2.setAttribute("x2", mNode.x + 40);
+                  l2.setAttribute("y2", mNode.y + 40);
+                  l2.setAttribute("stroke", "#d32f2f");
+                  l2.setAttribute("stroke-width", "2");
+                  l2.setAttribute("stroke-dasharray", "5,5");
+                  $("focus-lines").appendChild(l2);
+                }
+              });
+          });
+          const modal = $("focus-modal");
+          modal.style.display = "flex";
+          // ドラッグスクロール
+          const area = $("focus-scroll-area");
+          area.scrollLeft = 1000;
+          area.scrollTop = 0;
+          let isDown = false,
+            sX,
+            sY,
+            sL,
+            sT;
+          area.onmousedown = (e) => {
+            isDown = true;
+            sX = e.pageX;
+            sY = e.pageY;
+            sL = area.scrollLeft;
+            sT = area.scrollTop;
+            area.style.cursor = "grabbing";
+          };
+          area.onmouseleave = () => {
+            isDown = false;
+            area.style.cursor = "grab";
+          };
+          area.onmouseup = () => {
+            isDown = false;
+            area.style.cursor = "grab";
+          };
+          area.onmousemove = (e) => {
+            if (!isDown) return;
+            e.preventDefault();
+            const x = e.pageX - sX;
+            const y = e.pageY - sY;
+            area.scrollLeft = sL - x;
+            area.scrollTop = sT - y;
+          };
+        },
+        openDesigner: function () {
+          Designer.open();
+        },
+        closeDesigner: function () {
+          $("design-modal").style.display = "none";
+        },
+        updateFocusModal: function () {
+          if ($("focus-modal").style.display === "flex") this.openFocusTree();
+        },
+        closeFocusTree: function () {
+          $("focus-modal").style.display = "none";
+        },
+        notify: function (m, t) {
+          const d = $c("div", "news");
+          d.innerHTML = `<div style="font-weight:bold;margin-bottom:3px;color:#aaa">Day ${Game.day}</div>${m}`;
+          if (t === "war") {
+            d.style.borderLeftColor = "var(--danger)";
+            d.style.background = "rgba(60,10,10,.95)";
+          } else if (t === "success") d.style.borderLeftColor = "var(--hl)";
+          else if (t === "warn") {
+            d.style.borderLeftColor = "var(--warn)";
+            d.style.background = "rgba(60,60,10,.95)";
+          }
+          $("news-feed").prepend(d);
+          setTimeout(() => d.remove(), 6000);
+        },
+        showStartScreen: function () {
+          const list = $("country-list");
+          list.innerHTML = "";
+          const sortedTags = Object.keys(Game.countries)
+            .filter((t) => t !== "_SEA")
+            .sort((a, b) => Game.countries[b].fac - Game.countries[a].fac);
+          sortedTags.forEach((tag) => {
+            const c = Game.countries[tag];
+            if (c.provs.length === 0) return;
+            const d = $c("div", "country-card");
+            d.innerHTML = `<div class="c-flag" style="color:${c.col}">${
+              c.flag
+            }</div><div class="c-name">${
+              c.name
+            }</div><div class="c-info">工場:${c.fac} 人的:${nFmt(c.mp)}</div>`;
+            d.onclick = () => Game.startGame(tag);
+            list.appendChild(d);
+          });
+          $("start-screen").style.display = "flex";
+          $("loading-overlay").style.display = "none";
+        },
+      };
 
       const Input = {
         isDown: false,
@@ -1564,30 +2036,16 @@
                 this.executeBattlePlan();
               return;
             }
-            // Click detection adapted for Canvas
             const target = e.target;
-            // Check for Hex Click
             if (target.classList.contains("hex")) {
               const h = MapSys.hexes[target.dataset.id];
               if (h) this.onHexClick(e, h);
-            } else {
-              // Raycast to find unit on canvas
-              const pt = this.screenToWorld(e.clientX, e.clientY);
-              // Find unit near click
-              const u = Game.units.find(
-                (u) => Math.abs(u.x - pt.x) < 10 && Math.abs(u.y - pt.y) < 10
-              );
+            } else if (target.closest(".unit-grp")) {
+              const uEl = target.closest(".unit-grp");
+              const u = Game.units.find((x) => x.el === uEl);
               if (u) {
                 e.stopPropagation();
                 this.onHexClick(e, u.hex);
-              } else {
-                // Fallback: try to find hex under mouse via elementsFromPoint if canvas blocked it
-                const els = document.elementsFromPoint(e.clientX, e.clientY);
-                const hexEl = els.find((el) => el.classList.contains("hex"));
-                if (hexEl) {
-                  const h = MapSys.hexes[hexEl.dataset.id];
-                  if (h) this.onHexClick(e, h);
-                }
               }
             }
           });
@@ -1596,7 +2054,7 @@
             (e) => {
               e.preventDefault();
               const f = e.deltaY > 0 ? 0.9 : 1.1;
-              Renderer.s = Math.max(0.1, Math.min(8, Renderer.s * f));
+              Renderer.s = Math.max(0.4, Math.min(5, Renderer.s * f));
               Renderer.update();
             },
             { passive: false }
@@ -1739,8 +2197,11 @@
           }
         },
         hlUnits: function () {
+          document
+            .querySelectorAll(".unit-grp")
+            .forEach((el) => el.classList.remove("selected"));
+          this.selUnits.forEach((u) => u.el.classList.add("selected"));
           $("sel-count").innerText = this.selUnits.length;
-          // Visual feedback handled by canvas render loop
         },
         findPath: function (start, end, unitTag) {
           const q = [{ h: start, cost: 0 }];
@@ -1749,6 +2210,7 @@
           const costs = new Map();
           costs.set(start, 0);
           let limit = 0;
+          const MAX_SEARCH = 300;
           const getMinCostNode = () => {
             let minCost = Infinity;
             let minIndex = -1;
@@ -1761,8 +2223,7 @@
             if (minIndex !== -1) return q.splice(minIndex, 1)[0];
             return null;
           };
-          while (q.length && limit++ < 500) {
-            // Limit A* depth for performance
+          while (q.length && limit++ < MAX_SEARCH) {
             const curEntry = getMinCostNode();
             if (!curEntry) break;
             const cur = curEntry.h;
@@ -1805,293 +2266,176 @@
         layer: null,
         uiLayer: null,
         gameSvg: null,
-        ctx: null,
-        canvas: null,
-        init: function () {
-          this.canvas = $("unit-canvas");
-          this.ctx = this.canvas.getContext("2d");
-          this.resize();
-          window.addEventListener("resize", () => this.resize());
-        },
-        resize: function () {
-          this.canvas.width = Input.mapWrapEl.clientWidth;
-          this.canvas.height = Input.mapWrapEl.clientHeight;
-          this.update();
-        },
         update: function () {
           $(
             "game-svg"
           ).style.transform = `translate(${this.x}px, ${this.y}px) scale(${this.s})`;
-          this.drawUnits();
         },
-        drawUnits: function () {
-          const ctx = this.ctx;
-          const width = this.canvas.width;
-          const height = this.canvas.height;
-          ctx.clearRect(0, 0, width, height);
-
-          ctx.save();
-          ctx.translate(this.x, this.y);
-          ctx.scale(this.s, this.s);
-
-          // Batch drawing could be optimized here but canvas is fast enough for thousands
-          Game.units.forEach((u) => {
-            // Cull off-screen
-            const sx = u.x * this.s + this.x;
-            const sy = u.y * this.s + this.y;
-            // Rough bounds check (in screen space) logic is complicated with transform,
-            // relying on canvas clipping is usually fine for <10k units
-
-            const isSel = Input.selUnits.includes(u);
-            const isFighting =
-              u.innerEl && u.innerEl.classList.contains("fighting");
-
-            // Unit Box
-            ctx.fillStyle = isSel ? "#fff" : "#333";
-            if (isSel) ctx.fillRect(u.x - 12, u.y - 8, 24, 16); // Outline
-
-            const ownerCol = Game.countries[u.tag]
-              ? Game.countries[u.tag].col
-              : "#555";
-            ctx.fillStyle = ownerCol;
-            ctx.fillRect(u.x - 11, u.y - 7, 22, 14);
-
-            // Icon (Simple Text)
-            if (this.s > 0.5) {
-              ctx.fillStyle = "#fff";
-              ctx.font = "10px sans-serif";
-              ctx.textAlign = "center";
-              ctx.textBaseline = "middle";
-              ctx.fillText(u.icon, u.x, u.y);
-            }
-
-            // Health Bar
-            const hpW = (u.hp / 100) * 20;
-            ctx.fillStyle = "#00e676";
-            ctx.fillRect(u.x - 10, u.y + 5, hpW, 2);
-
-            // Org Bar
-            const orgW = (u.org / u.maxOrg) * 20;
-            ctx.fillStyle = "#ff9100";
-            ctx.fillRect(u.x - 10, u.y + 3, orgW, 2);
-
-            // Battle Indicator
-            if (isFighting) {
-              const offset = Math.sin(Date.now() / 50) * 1.5;
-              ctx.fillStyle = "rgba(255, 0, 0, 0.5)";
-              ctx.fillRect(u.x - 12 + offset, u.y - 8 + offset, 24, 16);
-            }
-          });
-
-          ctx.restore();
-
-          if (Game.running) requestAnimationFrame(() => this.drawUnits());
+        addUnit: function (u) {
+          const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+          g.className.baseVal = "unit-grp";
+          const inner = document.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "g"
+          );
+          inner.classList.add("unit-inner");
+          inner.innerHTML = `<rect class="unit-box" x="-11" y="-7"/><rect class="unit-bar" x="-10" y="5" width="20" height="2"/><rect class="unit-org-bar" x="-10" y="3" width="20" height="2"/><text class="unit-icon" y="3">${u.icon}</text>`;
+          g.appendChild(inner);
+          g.setAttribute("transform", `translate(${u.x},${u.y})`);
+          this.layer.appendChild(g);
+          u.el = g;
+          u.innerEl = inner;
+          u.bar = inner.querySelector(".unit-bar");
+          u.orgBar = inner.querySelector(".unit-org-bar");
         },
-        // No-op for old methods
-        addUnit: function (u) {},
-        updateUnit: function (u) {},
+        updateUnit: function (u) {
+          if (
+            Math.abs(u.x - u.lastRx) > 0.1 ||
+            Math.abs(u.y - u.lastRy) > 0.1
+          ) {
+            u.el.setAttribute("transform", `translate(${u.x},${u.y})`);
+            u.lastRx = u.x;
+            u.lastRy = u.y;
+          }
+          const hpW = (u.hp / 100) * 20;
+          const orgW = (u.org / u.maxOrg) * 20;
+          if (Math.abs(u.lastHpW - hpW) > 1) {
+            u.bar.setAttribute("width", Math.max(0, hpW));
+            u.lastHpW = hpW;
+          }
+          if (Math.abs(u.lastOrgW - orgW) > 1) {
+            u.orgBar.setAttribute("width", Math.max(0, orgW));
+            u.lastOrgW = orgW;
+          }
+        },
       };
 
-      const UI = {
-        init: function () {
-          this.update();
-        },
-        update: function () {
-          const p = Game.countries[Game.player];
-          if (!p) return;
-          $("res-pp").innerText = ~~p.pp;
-          $("res-st").innerText = p.st + "%";
-          $("res-ws").innerText = p.ws + "%";
-          $("res-man").innerText = nFmt(p.mp);
-          $("res-fac").innerText = p.fac;
-          $("res-eq").innerText = nFmt(p.eq);
-          $("res-xp").innerText = ~~p.xp;
-          $("val-wt").innerText = Game.tension + "%";
-          $("player-flag").innerText = p.flag;
-          $("army-count").innerText = Game.units.filter(
-            (u) => u.tag === Game.player
-          ).length;
-
-          const ts = Game.calcStats(p.template);
-          $("army-tmpl-stats").innerHTML = `<span>⚔️ 軟:${ts.sa} 硬:${
-            ts.ha
-          }</span><span>🛡️ 防:${ts.def} 貫:${
-            ts.prc
-          }</span><span>🚜 装:${ts.arm.toFixed(0)}</span>`;
-          $("recruit-cost").innerText = `人的:1000 装備:${ts.cost.toFixed(0)}`;
-
-          if (p.focus) {
-            const pct = (p.focusProg / p.focus.cost) * 100;
-            $("sb-focus-curr").innerText = p.focus.t + " (" + ~~pct + "%)";
-            $("sb-focus-bar").style.width = pct + "%";
-          } else if (p.buildingFactory) {
-            const pct =
-              (p.buildingFactory.progress / p.buildingFactory.cost) * 100;
-            $("sb-focus-curr").innerText = `${
-              p.buildingFactory.name
-            }中... (${~~pct}%)`;
-            $("sb-focus-bar").style.width = pct + "%";
-          } else {
-            $("sb-focus-curr").innerText = "国家方針を選択";
-            $("sb-focus-bar").style.width = "0%";
+      const AI = {
+        runCountry: function (tag) {
+          const c = Game.countries[tag];
+          if (!c || c.provs.length === 0 || c.dead) return;
+          if (
+            !c.focus &&
+            !c.buildingFactory &&
+            c.pp >= 70 &&
+            Math.random() < 0.05
+          ) {
+            c.pp -= 50;
+            c.buildingFactory = { cost: 10, progress: 0, name: "工場建設" };
           }
-        },
-        updateSidebar: function () {
-          const t = Game.selected || Game.player;
-          const c = Game.countries[t];
-          if (!c) return;
-          $("sb-name").innerText = c.name;
-          $("sb-portrait").innerText = c.flag;
-          $("sb-ideology").innerText = "Prefecture";
-          const diploMsg = $("diplo-msg");
-          const diploContent = $("diplo-content");
-          const dpName = $("dp-name");
-          const dpFaction = $("dp-faction");
-          const dpWarStatus = $("dp-war-status");
-          const btnDeclareWar = $("btn-declare-war");
-          if (Game.selected && Game.selected !== Game.player) {
-            diploMsg.style.display = "none";
-            diploContent.style.display = "block";
-            dpName.innerText = c.name;
-            dpFaction.innerText = c.faction || "なし";
-            dpWarStatus.style.display = Game.isWar(Game.player, t)
-              ? "block"
-              : "none";
-            btnDeclareWar.disabled = Game.isAlly(Game.player, t);
-          } else {
-            diploMsg.style.display = "block";
-            diploContent.style.display = "none";
-          }
-        },
-        toggleSidebar: function () {
-          const sidebar = $("sidebar");
-          sidebar.style.display =
-            sidebar.style.display === "none" ? "flex" : "none";
-        },
-        tab: function (id) {
-          document
-            .querySelectorAll(".tab")
-            .forEach((e) => e.classList.remove("active"));
-          document
-            .querySelectorAll(".view")
-            .forEach((e) => e.classList.remove("active"));
-          event.target.classList.add("active");
-          $(`v-${id}`).classList.add("active");
-        },
-        openFocusTree: function () {
-          const p = Game.countries[Game.player];
-          if (!p) return;
-          const treeType = p.treeType || "GENERIC";
-          const tree = DB.FocusTree[treeType] || DB.FocusTree.GENERIC;
-          $("focus-nodes").innerHTML = "";
-          $("focus-lines").innerHTML = "";
-          tree.forEach((f) => {
-            const el = $c("div", "focus-node");
-            el.style.left = f.x + "px";
-            el.style.top = f.y + "px";
-            el.innerHTML = `<div style="font-weight:bold">${f.t}</div><div style="font-size:12px;">${f.d}</div><div style="font-size:12px;color:#aaa">(${f.cost} days)</div>`;
-            const comp = p.completedFocuses.includes(f.id);
-            const avail =
-              !comp && f.req.every((r) => p.completedFocuses.includes(r));
-            const isLockedByProgress =
-              (p.focus && p.focus.id !== f.id) || p.buildingFactory;
-            if (comp) el.classList.add("completed");
-            else if (avail && !isLockedByProgress) {
-              el.classList.add("available");
-              el.onclick = () => Game.startFocus(f.id);
-            } else el.classList.add("locked");
-            if (p.focus && p.focus.id === f.id) {
-              el.classList.add("available");
+          const enemies = Game.wars
+            .filter((w) => w.atk === tag || w.def === tag)
+            .map((w) => (w.atk === tag ? w.def : w.atk));
+          const myUnits = Game.units.filter((u) => u.tag === tag);
+          const armyLimit = Math.min(~~(c.fac * 2 + 5), 80);
+          if (
+            c.mp > 2000 &&
+            myUnits.length < armyLimit &&
+            (enemies.length > 0 || Math.random() < 0.05)
+          ) {
+            let targetTmpl = DB.AITemplates.basic_inf;
+            const roll = Math.random();
+            if (c.fac >= 15) {
+              if (roll < 0.3) targetTmpl = DB.AITemplates.tank_div;
+              else if (roll < 0.5) targetTmpl = DB.AITemplates.mech_div;
+              else if (roll < 0.7) targetTmpl = DB.AITemplates.mot_div;
+              else targetTmpl = DB.AITemplates.strong_inf;
+            } else if (c.fac >= 8) {
+              if (roll < 0.15) targetTmpl = DB.AITemplates.tank_div;
+              else if (roll < 0.4) targetTmpl = DB.AITemplates.bike_div;
+              else targetTmpl = DB.AITemplates.strong_inf;
+            } else {
+              if (roll < 0.3) targetTmpl = DB.AITemplates.bike_div;
+              else targetTmpl = DB.AITemplates.basic_inf;
             }
-            $("focus-nodes").appendChild(el);
-            f.req.forEach((rid) => {
-              const par = tree.find((x) => x.id === rid);
-              if (par) {
-                const l = document.createElementNS(
-                  "http://www.w3.org/2000/svg",
-                  "line"
-                );
-                l.setAttribute("x1", par.x + 125);
-                l.setAttribute("y1", par.y + 130);
-                l.setAttribute("x2", f.x + 125);
-                l.setAttribute("y2", f.y);
-                l.setAttribute("stroke", comp ? "var(--hl)" : "#555");
-                l.setAttribute("stroke-width", "2");
-                $("focus-lines").appendChild(l);
+            const stats = Game.calcStats(targetTmpl);
+            if (c.eq >= stats.cost) {
+              c.mp -= 1000;
+              c.eq -= stats.cost;
+              Game.spawnUnit(tag, c.capital, targetTmpl);
+            }
+          }
+          if (!c.focus && !c.buildingFactory) {
+            const tree = DB.FocusTree.GENERIC;
+            const available = tree.filter(
+              (f) =>
+                !c.completedFocuses.includes(f.id) &&
+                f.req.every((r) => c.completedFocuses.includes(r))
+            );
+            const valid = available.filter(
+              (f) =>
+                !f.mut || !f.mut.some((m) => c.completedFocuses.includes(m))
+            );
+            if (valid.length > 0 && c.pp >= valid[0].cost)
+              Game.countries[tag].focus = valid[0];
+          }
+          const plannedMoves = new Set();
+          myUnits.forEach((u) => {
+            if (u.state === "moving" && u.path.length > 0)
+              plannedMoves.add(u.path[u.path.length - 1].id);
+          });
+          const idleUnits = myUnits
+            .filter((u) => u.state === "idle" && u.org > 20)
+            .sort(() => Math.random() - 0.5);
+          const frontline = Game.getFrontlineHexes(tag);
+          let actions = 0;
+          const APM = 15;
+          for (let u of idleUnits) {
+            if (actions >= APM) break;
+            let bestTarget = null;
+            let maxScore = -9999;
+            u.hex.adj.forEach((n) => {
+              if (n.owner === "_SEA" || n.owner === tag) return;
+              if (!Game.isWar(tag, n.owner)) return;
+              let score = 0;
+              if (plannedMoves.has(n.id)) score -= 200;
+              const enemyUnit = Game.getEnemyInHex(n, tag);
+              if (!enemyUnit) score += 100;
+              else {
+                if (enemyUnit.org < 30) score += 50;
+                else if (u.org < 40) score -= 50;
+                else score += 10;
+              }
+              if (score > maxScore) {
+                maxScore = score;
+                bestTarget = n;
               }
             });
-          });
-          $("focus-modal").style.display = "flex";
-        },
-        openDesigner: function () {
-          Designer.open();
-        },
-        closeDesigner: function () {
-          $("design-modal").style.display = "none";
-        },
-        updateFocusModal: function () {
-          if ($("focus-modal").style.display === "flex") this.openFocusTree();
-        },
-        closeFocusTree: function () {
-          $("focus-modal").style.display = "none";
-        },
-        notify: function (m, t) {
-          const d = $c("div", "news");
-          d.innerHTML = `<div class="news-title"><span>NEWS</span><span>Day ${Game.day}</span></div>${m}`;
-          if (t === "war") {
-            d.style.borderLeftColor = "var(--danger)";
-            d.style.background = "rgba(50,0,0,.9)";
+            if (bestTarget && maxScore > 0) {
+              u.path = [bestTarget];
+              u.state = "moving";
+              actions++;
+              plannedMoves.add(bestTarget.id);
+              continue;
+            }
+            if (frontline.length > 0 && Math.random() < 0.3) {
+              const f = frontline[Math.floor(Math.random() * frontline.length)];
+              const d = (u.x - f.x) ** 2 + (u.y - f.y) ** 2;
+              if (d < 10000) {
+                const path = Input.findPath(u.hex, f, tag);
+                if (path && path.length) {
+                  u.path = path.slice(0, 5);
+                  u.state = "moving";
+                  actions++;
+                  plannedMoves.add(path[path.length - 1].id);
+                }
+              }
+            }
           }
-          if (t === "success") d.style.borderLeftColor = "var(--hl)";
-          if (t === "warn") {
-            d.style.borderLeftColor = "var(--warn)";
-            d.style.background = "rgba(50,50,0,.9)";
+          if (enemies.length === 0) {
+            const neighbors = Game.getNeighbors(tag);
+            if (neighbors.length > 0) {
+              if (
+                c.peaceTimer > 300 &&
+                Math.random() < 0.3 &&
+                myUnits.length > 4
+              ) {
+                const target =
+                  neighbors[Math.floor(Math.random() * neighbors.length)];
+                Game.declareWar(tag, target);
+              }
+            }
           }
-          $("news-feed").prepend(d);
-          setTimeout(() => d.remove(), 6000);
-        },
-        showStartScreen: function () {
-          const list = $("country-list");
-          list.innerHTML = "";
-          const majors = [
-            "Tokyo",
-            "Osaka",
-            "Aichi",
-            "Fukuoka",
-            "Hokkaido",
-            "Miyagi",
-            "Gunma",
-            "Hyogo",
-          ];
-          const sortedTags = Object.keys(Game.countries)
-            .filter((t) => t !== "_SEA")
-            .sort((a, b) => {
-              const cA = Game.countries[a];
-              const cB = Game.countries[b];
-              const pA = majors.some((m) => cA.name.includes(m)) ? 1 : 0;
-              const pB = majors.some((m) => cB.name.includes(m)) ? 1 : 0;
-              if (pA !== pB) return pB - pA;
-              return cB.fac - cA.fac;
-            });
-          sortedTags.forEach((tag) => {
-            const c = Game.countries[tag];
-            if (c.provs.length === 0) return;
-            const d = $c("div", "country-card");
-            let special = "";
-            if (c.treeType !== "GENERIC")
-              special = `<div class="special-tag">★ 固有方針あり</div>`;
-            d.innerHTML = `<div class="c-flag" style="color:${c.col}">${
-              c.flag
-            }</div><div class="c-name">${
-              c.name
-            }</div><div class="c-info">工場:${c.fac} 人的:${nFmt(
-              c.mp
-            )}</div>${special}`;
-            d.onclick = () => Game.startGame(tag);
-            list.appendChild(d);
-          });
-          $("start-screen").style.display = "flex";
-          $("loading-overlay").style.display = "none";
         },
       };
 
@@ -2108,18 +2452,18 @@
         lastTickTime: 0,
         tickInterval: 100,
         geoData: null,
+        isMapOverridden: false,
         unitGrid: new Map(),
 
         init: async function () {
-          await this.loadMapData();
+          if (!this.isMapOverridden) {
+            await this.loadMapData();
+          }
           Input.init();
           this.initCountries();
           this.initMap();
           UI.showStartScreen();
-          Renderer.init();
-          requestAnimationFrame(() => Renderer.drawUnits()); // Start render loop
         },
-
         startGame: function (playerTag) {
           this.player = playerTag;
           this.countries[this.player].col = "#b71c1c";
@@ -2133,7 +2477,6 @@
           this.lastTickTime = performance.now();
           requestAnimationFrame(this.loop.bind(this));
         },
-
         loadMapData: async function () {
           try {
             const res = await fetch(
@@ -2145,7 +2488,6 @@
             alert("マップデータの読み込みに失敗しました: " + e.message);
           }
         },
-
         loop: function (currentTime) {
           if (!this.running) {
             this.lastTickTime = currentTime;
@@ -2162,11 +2504,9 @@
           }
           requestAnimationFrame(this.loop.bind(this));
         },
-
         processTick: function () {
           this.day++;
           const tags = Object.keys(this.countries);
-
           tags.forEach((tag) => {
             if (tag === "_SEA") return;
             const c = this.countries[tag];
@@ -2174,20 +2514,15 @@
             c.pp += (0.5 + c.fac / 50) * (1 + (c.ppGainBonus || 0));
             c.eq +=
               c.fac *
-              8 *
+              15 *
               (1 + (c.facProdBonus || 0)) *
               (1 + (c.eqProdBonus || 0));
-            if (c.eq > 100000) c.eq = 100000;
+            if (c.eq > 200000) c.eq = 200000;
             c.peaceTimer = (c.peaceTimer || 0) + 1;
-
-            // Canvas uses pseudo-elements for 'fighting' class, but logic remains same
             const fighting = this.units.some(
-              (u) =>
-                u.tag === tag &&
-                u.innerEl &&
-                u.innerEl.classList.contains("fighting")
+              (u) => u.tag === tag && u.innerEl.classList.contains("fighting")
             );
-            c.xp += (0.05 + (fighting ? 0.2 : 0)) * (1 + (c.xpGainBonus || 0));
+            c.xp += (0.05 + (fighting ? 0.3 : 0)) * (1 + (c.xpGainBonus || 0));
             if (c.xp > 500) c.xp = 500;
             if (c.focus) {
               c.focusProg++;
@@ -2204,9 +2539,8 @@
             }
             if (this.day % 30 === 0 && c.mp < 1e6) c.mp += c.fac * 100;
           });
-
           this.aiTimer++;
-          if (this.aiTimer > 2) {
+          if (this.aiTimer > 1) {
             const aiBatch = 8;
             const startIdx = (this.day * aiBatch) % tags.length;
             for (let i = 0; i < aiBatch; i++) {
@@ -2218,8 +2552,8 @@
           this.updateUnits();
           UI.update();
         },
-
         initCountries: function () {
+          this.countries = {};
           if (this.geoData && this.geoData.features) {
             this.geoData.features.forEach((f) => {
               const props = f.properties;
@@ -2230,11 +2564,11 @@
               this.countries[id] = {
                 tag: id,
                 name: name,
-                col: randCol(),
+                col: nextColor(),
                 flag: "🇯🇵",
                 mp: 50000 + Math.random() * 50000,
                 fac: 2 + Math.floor(Math.random() * 3),
-                eq: 2000,
+                eq: 5000,
                 xp: 10,
                 doctrine: "balanced",
                 provs: [],
@@ -2245,31 +2579,24 @@
                 focusProg: 0,
                 completedFocuses: [],
                 faction: null,
-                template: { bat: ["inf", "inf", "inf"], sup: [] },
+                template: DB.AITemplates.basic_inf,
                 buildingFactory: null,
                 treeType: "GENERIC",
                 peaceTimer: 0,
               };
               if (name.includes("Tokyo") || name.includes("東京")) {
-                this.countries[id].treeType = "TOKYO";
-                this.countries[id].fac = 12;
-                this.countries[id].mp = 200000;
+                this.countries[id].fac = 15;
+                this.countries[id].mp = 300000;
               } else if (name.includes("Osaka") || name.includes("大阪")) {
-                this.countries[id].treeType = "OSAKA";
+                this.countries[id].fac = 12;
+              } else if (name.includes("Aichi") || name.includes("愛知")) {
                 this.countries[id].fac = 10;
-              } else if (name.includes("Miyagi") || name.includes("宮城")) {
-                this.countries[id].treeType = "MIYAGI";
-                this.countries[id].fac = 6;
-              } else if (name.includes("Gunma") || name.includes("群馬")) {
-                this.countries[id].treeType = "GUNMA";
-              } else if (name.includes("Hyogo") || name.includes("兵庫")) {
-                this.countries[id].treeType = "HYOGO";
+              } else if (name.includes("Fukuoka") || name.includes("福岡")) {
                 this.countries[id].fac = 8;
               }
             });
           }
         },
-
         calcStats: function (tmpl) {
           let s = {
             sa: 0,
@@ -2316,16 +2643,14 @@
           s.arm = (s.arm + maxArm) / 2;
           return s;
         },
-
         spawnInitialUnits: function () {
           Object.values(this.countries).forEach((c) => {
             if (c.tag === "_SEA") return;
-            const n = Math.max(1, ~~(c.fac / 3));
+            const n = Math.min(6, Math.max(1, ~~(c.fac / 3)));
             for (let i = 0; i < n; i++)
               if (c.provs.length) this.spawnUnit(c.tag, c.capital, c.template);
           });
         },
-
         spawnUnit: function (tag, hex, template) {
           if (!hex) return;
           const tmplCopy = { bat: [...template.bat], sup: [...template.sup] };
@@ -2344,23 +2669,15 @@
             template: tmplCopy,
             stats: stats,
             icon: DB.UnitTypes[tmplCopy.bat[0]].icon,
-            innerEl: {
-              classList: {
-                add: (c) => {
-                  u._fighting = true;
-                },
-                remove: (c) => {
-                  u._fighting = false;
-                },
-                contains: (c) => u._fighting,
-              },
-            }, // Mock DOM for Canvas logic
-            _fighting: false,
+            lastRx: 0,
+            lastRy: 0,
+            lastHpW: 0,
+            lastOrgW: 0,
           };
           this.units.push(u);
           this.addToGrid(u, hex);
+          Renderer.addUnit(u);
         },
-
         addToGrid: function (u, hex) {
           if (!this.unitGrid.has(hex.id)) this.unitGrid.set(hex.id, []);
           this.unitGrid.get(hex.id).push(u);
@@ -2379,19 +2696,17 @@
             .filter((u) => u.tag !== myTag && this.isWar(u.tag, myTag));
           return enemies.length > 0 ? enemies[0] : null;
         },
-
         updateUnits: function () {
           for (let i = this.units.length - 1; i >= 0; i--) {
             const u = this.units[i];
             if (u.hp <= 0) {
               this.removeFromGrid(u, u.hex);
+              u.el.remove();
               this.units.splice(i, 1);
             }
           }
-
           this.units.forEach((u) => {
             if (u.state === "idle" && u.org < u.maxOrg) u.org += 0.8;
-
             if (u.state === "moving" && u.path.length) {
               const next = u.path[0];
               if (!next) {
@@ -2399,7 +2714,6 @@
                 u.state = "idle";
                 return;
               }
-
               const enemyInNext = this.getEnemyInHex(next, u.tag);
               const enemyHere = this.getEnemyInHex(u.hex, u.tag);
               const enemy =
@@ -2407,7 +2721,6 @@
                 (Math.hypot(next.x - u.x, next.y - u.y) < 15
                   ? enemyInNext
                   : null);
-
               if (enemy) {
                 u.innerEl.classList.add("fighting");
                 if (Math.random() < 0.15) {
@@ -2442,15 +2755,14 @@
               } else {
                 u.innerEl.classList.remove("fighting");
               }
-
               const unitSpeed = u.stats.spd * (u.org / u.maxOrg);
               const terrainMoveCost = DB.Terrain[next.type].moveCost || 1;
               const spd = unitSpeed / terrainMoveCost;
-
+              if (u.hex.type === "sea") u.el.classList.add("moving-sea");
+              else u.el.classList.remove("moving-sea");
               const dx = next.x - u.x,
                 dy = next.y - u.y;
               const dist = Math.hypot(dx, dy);
-
               if (
                 dist < 10 &&
                 next.owner !== "_SEA" &&
@@ -2467,7 +2779,6 @@
                 u.hex = next;
                 u.path.shift();
                 this.addToGrid(u, next);
-
                 if (
                   u.hex.owner !== "_SEA" &&
                   u.hex.owner !== u.tag &&
@@ -2481,21 +2792,21 @@
                 u.x += (dx / dist) * spd;
                 u.y += (dy / dist) * spd;
               }
+              Renderer.updateUnit(u);
             }
           });
         },
-
         recruit: function () {
           const c = this.countries[this.player];
           const stats = this.calcStats(c.template);
           const armySize = this.units.filter(
             (u) => u.tag === this.player
           ).length;
-          if (armySize >= c.fac * 3 + 5) {
-            UI.notify("師団上限です", "warn");
+          const maxArmy = Math.min(~~(c.fac * 1.5 + 2), 50);
+          if (armySize >= maxArmy) {
+            UI.notify(`師団上限です (現在:${armySize}/${maxArmy})`, "warn");
             return;
           }
-
           const actualEqCost = stats.cost;
           if (c.mp >= 1000 && c.eq >= actualEqCost) {
             c.mp -= 1000;
@@ -2511,7 +2822,6 @@
             );
           }
         },
-
         buildFactory: function () {
           const c = this.countries[this.player];
           if (c.focus) {
@@ -2531,7 +2841,6 @@
           UI.notify("工場建設を開始しました", "success");
           UI.update();
         },
-
         calcCapitals: function () {
           Object.values(this.countries).forEach((c) => {
             if (c.tag === "_SEA") return;
@@ -2565,16 +2874,7 @@
             let best = c.provs[0];
             const fixed =
               CapitalCoords[c.tag] ||
-              CapitalCoordsByName[c.name] ||
-              (c.name.includes("Tokyo")
-                ? CapitalCoordsByName["Tokyo"]
-                : null) ||
-              (c.name.includes("Hokkaido")
-                ? CapitalCoordsByName["Hokkaido"]
-                : null) ||
-              (c.name.includes("Okinawa")
-                ? CapitalCoordsByName["Okinawa"]
-                : null);
+              (c.name.includes("Tokyo") ? CapitalCoords["P13"] : null);
             if (fixed) {
               let minD = Infinity;
               c.provs.forEach((p) => {
@@ -2621,7 +2921,6 @@
             c.capIcon.setAttribute("y", best.y + 6);
           });
         },
-
         conquerHex: function (u, h) {
           const oldOwner = h.owner;
           if (oldOwner === u.tag) return;
@@ -2639,7 +2938,6 @@
             UI.notify(`${nc.name} が ${oc.name} の首都を陥落させた！`, "war");
             oc.ws -= 50;
             if (oc.ws < 20) {
-              UI.notify(`${oc.name} は降伏しました。`, "war");
               this.capitulate(oldOwner, u.tag);
             } else {
               this.calcCapitals();
@@ -2649,9 +2947,15 @@
           }
         },
         capitulate: function (loser, winner) {
-          UI.notify(`${this.countries[loser].name} は降伏しました`, "success");
           const lc = this.countries[loser];
           const wc = this.countries[winner];
+          SuperEvent.trigger(
+            "国家ノ崩壊",
+            `${lc.name} ハ敗北シタ。歴史ハ勝者ニヨッテ作ラレル。`,
+            `${wc.name} 司令部`,
+            "💀",
+            lc.col
+          );
           [...lc.provs].forEach((p) => {
             p.owner = winner;
             p.el.setAttribute("fill", wc.col);
@@ -2662,6 +2966,10 @@
           lc.provs = [];
           lc.dead = true;
           this.units = this.units.filter((u) => u.tag !== loser);
+          document.querySelectorAll(".unit-grp").forEach((el) => {
+            const uObj = this.units.find((x) => x.el === el);
+            if (!uObj) el.remove();
+          });
           this.unitGrid.forEach((v, k) => {
             this.unitGrid.set(
               k,
@@ -2683,6 +2991,17 @@
             `${this.countries[a].name} が ${this.countries[b].name} に宣戦布告！`,
             "war"
           );
+          if (a === this.player || b === this.player) {
+            const enemy = a === this.player ? b : a;
+            const cName = this.countries[enemy].name;
+            SuperEvent.trigger(
+              "開戦ノ狼煙",
+              "平和ノ時代ハ終ワッタ。我々ハ戦ウシカナイ。",
+              `${cName} 政府`,
+              "⚔️",
+              this.countries[enemy].col
+            );
+          }
           if (Game.selected === b) UI.updateSidebar();
         },
         isWar: function (a, b) {
@@ -2708,9 +3027,8 @@
             UI.notify("工場建設中は国家方針を開始できません。", "warn");
             return;
           }
-          const treeType = c.treeType || "GENERIC";
-          const tree = DB.FocusTree[treeType];
-          const f = tree && tree.find((x) => x.id === fid);
+          const tree = DB.FocusTree.GENERIC;
+          const f = tree.find((x) => x.id === fid);
           if (f && c.pp >= f.cost) {
             c.focus = f;
             c.focusProg = 0;
@@ -2759,7 +3077,6 @@
             )
           );
         },
-
         initMap: function () {
           const svg = document.createElementNS(
             "http://www.w3.org/2000/svg",
@@ -2924,7 +3241,6 @@
               }
             }
           }
-
           const gridMap = {};
           MapSys.hexes.forEach((h) => (gridMap[`${h.gx},${h.gy}`] = h));
           MapSys.hexes.forEach((a) => {
@@ -2971,200 +3287,77 @@
         },
       };
 
-      const AI = {
-        runCountry: function (tag) {
-          const c = Game.countries[tag];
-          if (!c || c.provs.length === 0 || c.dead) return;
-
-          if (
-            !c.focus &&
-            !c.buildingFactory &&
-            c.pp >= 70 &&
-            Math.random() < 0.05
-          ) {
-            c.pp -= 50;
-            c.buildingFactory = { cost: 10, progress: 0, name: "工場建設" };
-          }
-
-          const enemies = Game.wars
-            .filter((w) => w.atk === tag || w.def === tag)
-            .map((w) => (w.atk === tag ? w.def : w.atk));
-          const myUnits = Game.units.filter((u) => u.tag === tag);
-          const stats = Game.calcStats(c.template);
-
-          const armyLimit = c.fac * 3 + 5;
-          if (
-            c.mp > 5000 &&
-            c.eq >= stats.cost &&
-            myUnits.length < armyLimit &&
-            (enemies.length > 0 || Math.random() < 0.02)
-          ) {
-            c.mp -= 1000;
-            c.eq -= stats.cost;
-            Game.spawnUnit(tag, c.capital, c.template);
-          }
-
-          if (!c.focus && !c.buildingFactory) {
-            const treeType = c.treeType || "GENERIC";
-            const tree = DB.FocusTree[treeType];
-            const available = tree.filter(
-              (f) =>
-                !c.completedFocuses.includes(f.id) &&
-                f.req.every((r) => c.completedFocuses.includes(r))
-            );
-            if (available.length > 0 && c.pp >= available[0].cost)
-              Game.countries[tag].focus = available[0];
-          }
-
-          const idleUnits = myUnits
-            .filter((u) => u.state === "idle" && u.org > 20)
-            .sort(() => Math.random() - 0.5);
-          const frontline = Game.getFrontlineHexes(tag);
-          let actions = 0;
-          const APM = 5;
-
-          for (let u of idleUnits) {
-            if (actions >= APM) break;
-            let target = null;
-
-            const enemyAdj = u.hex.adj.filter((n) => enemies.includes(n.owner));
-            if (enemyAdj.length > 0) {
-              target = enemyAdj[Math.floor(Math.random() * enemyAdj.length)];
-            } else if (frontline.length > 0) {
-              // 負荷軽減のため、前線チェックを簡略化（ランダムサンプリング）
-              let bestF = null;
-              let minD = Infinity;
-              for (let i = 0; i < 5; i++) {
-                const f =
-                  frontline[Math.floor(Math.random() * frontline.length)];
-                const d = (u.x - f.x) ** 2 + (u.y - f.y) ** 2;
-                if (d < minD) {
-                  minD = d;
-                  bestF = f;
-                }
-              }
-              if (bestF) {
-                const path = Input.findPath(u.hex, bestF, tag);
-                if (path && path.length) {
-                  u.path = path.slice(0, 5);
-                  u.state = "moving";
-                  actions++;
-                  continue;
-                }
-              }
-            } else if (Math.random() < 0.1) {
-              const valid = u.hex.adj.filter((n) => n.owner === tag);
-              if (valid.length)
-                target = valid[Math.floor(Math.random() * valid.length)];
-            }
-
-            if (target) {
-              const path = Input.findPath(u.hex, target, u.tag);
-              if (path && path.length) {
-                u.path = path.slice(0, 5);
-                u.state = "moving";
-                actions++;
-              }
-            }
-          }
-
-          const aggressionThreshold = 200;
-          if (enemies.length === 0) {
-            const neighbors = Game.getNeighbors(tag);
-            if (neighbors.length > 0) {
-              let chance = 0.005;
-              if (c.peaceTimer > aggressionThreshold) chance = 0.5;
-              if (Math.random() < chance && myUnits.length > 3) {
-                const target =
-                  neighbors[Math.floor(Math.random() * neighbors.length)];
-                Game.declareWar(tag, target);
-              }
-            }
-          }
-        },
-      };
-
       const Designer = {
-        tmp: { bat: [], sup: [] },
+        current: { bat: [], sup: [] },
         open: function () {
           const p = Game.countries[Game.player];
           if (!p) return;
-          this.tmp = { bat: [...p.template.bat], sup: [...p.template.sup] };
-          this.renderOptions();
-          this.renderGrid();
-          this.updateStats();
+          this.current = { bat: [...p.template.bat], sup: [...p.template.sup] };
+          $("ds-xp").innerText = ~~p.xp;
           $("design-modal").style.display = "flex";
-        },
-        close: function () {
-          $("design-modal").style.display = "none";
+          this.renderOptions();
+          this.updateGrid();
         },
         renderOptions: function () {
-          const batBox = $("opt-battalions");
-          const supBox = $("opt-support");
-          batBox.innerHTML = "";
-          supBox.innerHTML = "";
-          Object.keys(DB.UnitTypes).forEach((k) => {
-            const u = DB.UnitTypes[k];
-            const div = $c("div", "unit-opt");
-            div.innerHTML = `<span class="unit-opt-icon">${u.icon}</span><span>${u.name}</span><span style="font-size:11px;color:#aaa;margin-left:auto">IC:${u.cost}</span>`;
-            div.onclick = () => this.addUnit(k);
-            if (u.type === "bat") batBox.appendChild(div);
-            else supBox.appendChild(div);
+          const batDiv = $("opt-battalions");
+          const supDiv = $("opt-support");
+          batDiv.innerHTML = "";
+          supDiv.innerHTML = "";
+          Object.keys(DB.UnitTypes).forEach((key) => {
+            const u = DB.UnitTypes[key];
+            const el = $c("div", "unit-opt");
+            el.innerHTML = `<span class="unit-opt-icon">${u.icon}</span><span>${u.name}</span><span style="font-size:10px;color:#aaa;margin-left:auto">Cost:${u.cost}</span>`;
+            el.onclick = () => this.addUnit(key, u.type);
+            if (u.type === "bat") batDiv.appendChild(el);
+            else supDiv.appendChild(el);
           });
         },
-        renderGrid: function () {
-          $("ds-xp").innerText = ~~Game.countries[Game.player].xp;
-          const batGrid = $("grid-bat");
-          batGrid.innerHTML = "";
-          for (let i = 0; i < 6; i++) {
-            const type = this.tmp.bat[i];
-            const slot = $c("div", type ? "slot filled" : "slot");
-            if (type) {
-              const u = DB.UnitTypes[type];
-              slot.innerHTML = `<span>${u.icon}</span><div class="rm" onclick="event.stopPropagation(); Designer.removeUnit('bat',${i})">×</div>`;
-            } else {
-              slot.innerHTML = `<span style="opacity:0.2">+</span>`;
-            }
-            batGrid.appendChild(slot);
-          }
-          const supGrid = $("grid-sup");
-          supGrid.innerHTML = "";
-          for (let i = 0; i < 3; i++) {
-            const type = this.tmp.sup[i];
-            const slot = $c("div", type ? "slot filled" : "slot");
-            if (type) {
-              const u = DB.UnitTypes[type];
-              slot.innerHTML = `<span>${u.icon}</span><div class="rm" onclick="event.stopPropagation(); Designer.removeUnit('sup',${i})">×</div>`;
-            } else {
-              slot.innerHTML = `<span style="opacity:0.2">+</span>`;
-            }
-            supGrid.appendChild(slot);
-          }
-        },
-        addUnit: function (id) {
-          const u = DB.UnitTypes[id];
-          if (u.type === "bat") {
-            if (this.tmp.bat.length < 6) this.tmp.bat.push(id);
-            else UI.notify("主力大隊は最大6枠です", "warn");
+        addUnit: function (id, type) {
+          if (type === "bat") {
+            if (this.current.bat.length < 9) {
+              this.current.bat.push(id);
+              this.updateGrid();
+            } else UI.notify("主力大隊はこれ以上追加できません", "warn");
           } else {
-            if (this.tmp.sup.includes(id)) {
-              UI.notify("同じ支援中隊は重複できません", "warn");
-              return;
-            }
-            if (this.tmp.sup.length < 3) this.tmp.sup.push(id);
-            else UI.notify("支援中隊は最大3枠です", "warn");
+            if (this.current.sup.length < 3 && !this.current.sup.includes(id)) {
+              this.current.sup.push(id);
+              this.updateGrid();
+            } else
+              UI.notify("支援中隊は追加できないか、既に存在します", "warn");
           }
-          this.renderGrid();
-          this.updateStats();
         },
-        removeUnit: function (cat, idx) {
-          if (cat === "bat") this.tmp.bat.splice(idx, 1);
-          else this.tmp.sup.splice(idx, 1);
-          this.renderGrid();
-          this.updateStats();
+        removeUnit: function (idx, type) {
+          if (type === "bat") this.current.bat.splice(idx, 1);
+          else this.current.sup.splice(idx, 1);
+          this.updateGrid();
         },
-        updateStats: function () {
-          const s = Game.calcStats(this.tmp);
+        updateGrid: function () {
+          const gb = $("grid-bat");
+          const gs = $("grid-sup");
+          gb.innerHTML = "";
+          gs.innerHTML = "";
+          this.current.bat.forEach((uid, i) => {
+            const u = DB.UnitTypes[uid];
+            const el = $c("div", "slot filled");
+            el.innerHTML = `${u.icon}<div class="rm" onclick="event.stopPropagation();Designer.removeUnit(${i},'bat')">×</div>`;
+            gb.appendChild(el);
+          });
+          for (let i = this.current.bat.length; i < 6; i++) {
+            gb.appendChild($c("div", "slot"));
+          }
+          this.current.sup.forEach((uid, i) => {
+            const u = DB.UnitTypes[uid];
+            const el = $c("div", "slot filled");
+            el.innerHTML = `${u.icon}<div class="rm" onclick="event.stopPropagation();Designer.removeUnit(${i},'sup')">×</div>`;
+            gs.appendChild(el);
+          });
+          for (let i = this.current.sup.length; i < 3; i++) {
+            gs.appendChild($c("div", "slot"));
+          }
+          this.calcPreview();
+        },
+        calcPreview: function () {
+          const s = Game.calcStats(this.current);
           $("ds-atk-s").innerText = s.sa.toFixed(1);
           $("ds-atk-h").innerText = s.ha.toFixed(1);
           $("ds-def").innerText = s.def.toFixed(1);
@@ -3174,19 +3367,23 @@
         },
         save: function () {
           const p = Game.countries[Game.player];
-          if (this.tmp.bat.length === 0) {
-            UI.notify("主力大隊が少なくとも1つ必要です", "warn");
+          const cost = 10;
+          if (p.xp < cost) {
+            UI.notify(`陸軍経験値が足りません (必要: ${cost})`, "warn");
             return;
           }
-          if (p.xp < 10) {
-            UI.notify("陸軍経験値が足りません (10必要)", "warn");
+          if (this.current.bat.length === 0) {
+            UI.notify("少なくとも1つの主力大隊が必要です", "warn");
             return;
           }
-          p.xp -= 10;
-          p.template = { bat: [...this.tmp.bat], sup: [...this.tmp.sup] };
+          p.xp -= cost;
+          p.template = {
+            bat: [...this.current.bat],
+            sup: [...this.current.sup],
+          };
           UI.notify("師団編成を保存しました", "success");
+          UI.closeDesigner();
           UI.update();
-          this.close();
         },
       };
 
