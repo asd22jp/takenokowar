@@ -6,7 +6,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, orientation=landscape"
     />
-    <title>都道府県戦線</title>
+    <title>Hoi4: Prefecture Wars - Mobile Fix</title>
     <style>
       /* === 全体設定 === */
       body {
@@ -391,6 +391,8 @@
         border-color: #5f0000;
         color: #ffcdd2;
       }
+
+      /* モーダル共通 */
       .modal {
         position: fixed;
         inset: 0;
@@ -402,9 +404,10 @@
         backdrop-filter: blur(5px);
       }
       .modal-win {
-        width: 90%;
+        width: 95%;
         max-width: 1200px;
-        height: 85%;
+        height: 90%;
+        max-height: 800px;
         background: #1a1a1a;
         border: 1px solid #444;
         display: flex;
@@ -421,11 +424,34 @@
         align-items: center;
         border-bottom: 1px solid #333;
       }
+
+      /* 押しやすい閉じるボタン */
+      .close-btn-lg {
+        background: #b71c1c;
+        color: #fff;
+        font-size: 24px;
+        font-weight: bold;
+        border: 1px solid #ff5252;
+        border-radius: 5px;
+        width: 44px;
+        height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+      }
+      .close-btn-lg:active {
+        transform: scale(0.95);
+        background: #f00;
+      }
+
       #focus-modal .modal-body {
         overflow: hidden;
         cursor: grab;
         background: #0a0a0a;
         touch-action: none;
+        height: 100%;
       }
       #focus-canvas {
         width: 3000px;
@@ -491,29 +517,24 @@
         height: 100%;
       }
 
-      /* デザイナー */
+      /* デザイナー（スマホ対応強化） */
       .ds-layout {
         display: flex;
         height: 100%;
+        overflow: hidden;
       }
-      @media (max-width: 800px) {
-        .ds-layout {
-          flex-direction: column;
-        }
-        .ds-panel {
-          width: 100%;
-          height: 30%;
-          border-right: none;
-          border-bottom: 1px solid #444;
-        }
-      }
+
+      /* 左パネル（リスト） */
       .ds-panel {
         width: 250px;
         background: #222;
         border-right: 1px solid #444;
         padding: 15px;
         overflow-y: auto;
+        flex-shrink: 0;
       }
+
+      /* 右メインエリア（グリッド） */
       .ds-main {
         flex: 1;
         padding: 20px;
@@ -523,6 +544,61 @@
         background: #181818;
         overflow-y: auto;
       }
+
+      /* モバイル・レスポンシブ調整 */
+      @media (max-width: 850px) {
+        .ds-layout {
+          flex-direction: row;
+        }
+        .ds-panel {
+          width: 35%;
+          padding: 10px;
+        }
+        .ds-main {
+          padding: 10px;
+          width: 65%;
+        }
+        .ds-grid {
+          grid-template-columns: repeat(3, 1fr);
+          gap: 5px;
+          padding: 10px;
+        }
+        .slot {
+          width: 45px;
+          height: 45px;
+          font-size: 18px;
+        }
+        .unit-opt {
+          padding: 8px;
+          font-size: 11px;
+        }
+        .unit-opt-icon {
+          font-size: 14px;
+        }
+
+        /* 統計情報の文字サイズ縮小 */
+        #ds-stats-box {
+          font-size: 11px !important;
+        }
+      }
+
+      /* さらに小さい画面（縦持ちなど） */
+      @media (max-width: 500px) {
+        .ds-layout {
+          flex-direction: column-reverse;
+        } /* グリッドを上に */
+        .ds-panel {
+          width: 100%;
+          height: 40%;
+          border-right: none;
+          border-top: 1px solid #444;
+        }
+        .ds-main {
+          width: 100%;
+          height: 60%;
+        }
+      }
+
       .ds-grid {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
@@ -792,7 +868,7 @@
           text-shadow: 0 0 10px #500;
         "
       >
-        都道府県大戦
+        Hoi4: 都道府県大戦
       </div>
       <div style="color: #aaa; margin-bottom: 40px; text-align: center">
         指揮する都道府県を選択セヨ
@@ -1052,13 +1128,7 @@
           <span style="font-size: 18px; font-weight: bold; color: #ddd"
             >県政方針ツリー (ドラッグして移動)</span
           >
-          <button
-            class="spd-btn"
-            style="font-size: 20px"
-            onclick="UI.closeFocusTree()"
-          >
-            ×
-          </button>
+          <button class="close-btn-lg" onclick="UI.closeFocusTree()">×</button>
         </div>
         <div class="modal-body" id="focus-scroll-area">
           <div id="focus-canvas">
@@ -1069,14 +1139,12 @@
       </div>
     </div>
 
-    <!-- モーダル: 師団設計 -->
+    <!-- モーダル: 師団設計（スマホ対応修正版） -->
     <div id="design-modal" class="modal">
-      <div class="modal-win" style="width: 1000px; height: 800px">
+      <div class="modal-win">
         <div class="modal-head">
           <div style="display: flex; align-items: center; gap: 10px">
-            <span style="font-size: 18px; font-weight: bold"
-              >師団編成デザイナー</span
-            >
+            <span style="font-size: 16px; font-weight: bold">師団編成</span>
             <span
               style="
                 font-size: 12px;
@@ -1087,13 +1155,7 @@
               >★ <span id="ds-xp">0</span> XP</span
             >
           </div>
-          <button
-            class="spd-btn"
-            style="font-size: 20px"
-            onclick="UI.closeDesigner()"
-          >
-            ×
-          </button>
+          <button class="close-btn-lg" onclick="UI.closeDesigner()">×</button>
         </div>
         <div class="ds-layout">
           <div class="ds-panel">
@@ -1157,14 +1219,16 @@
               </div>
             </div>
             <div
+              id="ds-stats-box"
               style="
                 width: 100%;
                 max-width: 500px;
                 background: #222;
-                padding: 15px;
+                padding: 10px;
                 border-radius: 5px;
                 margin-top: 10px;
                 border: 1px solid #333;
+                font-size: 13px;
               "
             >
               <div
@@ -1181,9 +1245,8 @@
                 style="
                   display: grid;
                   grid-template-columns: 1fr 1fr;
-                  gap: 8px;
+                  gap: 4px;
                   width: 100%;
-                  font-size: 13px;
                 "
               >
                 <div style="display: flex; justify-content: space-between">
@@ -1230,7 +1293,7 @@
             </div>
             <button
               class="btn btn-green"
-              style="margin-top: 20px; width: 200px"
+              style="margin-top: 10px; width: 100%"
               onclick="Designer.save()"
             >
               保存 (コスト: 10 XP)
@@ -1460,6 +1523,7 @@
       const addF = (id, x, y, t, d, cost, req, eff, mut, cond) =>
         FT.push({ id, x, y, t, d, cost, req, eff, mut, cond });
 
+      // === 都道府県内戦 国家方針 (Hoi4 Mod風) ===
       addF(
         "pol_start",
         1400,
@@ -2808,237 +2872,108 @@
         },
       };
 
-      const AI = {
-        runCountry: function (tag) {
-          const c = Game.countries[tag];
-          if (!c || c.provs.length === 0 || c.dead) return;
-
-          // 内政AI: 国家方針の選択
-          if (!c.focus && !c.buildingFactory) {
-            const tree = DB.FocusTree.GENERIC;
-            const available = tree.filter(
-              (f) =>
-                !c.completedFocuses.includes(f.id) &&
-                f.req.every((r) => c.completedFocuses.includes(r)) &&
-                (!f.mut ||
-                  !f.mut.some((m) => c.completedFocuses.includes(m))) &&
-                (!f.cond || f.cond(c))
-            );
-            if (available.length > 0) {
-              c.focus = available[Math.floor(Math.random() * available.length)];
-              c.focusProg = 0;
-            } else if (c.pp >= 70 && Math.random() < 0.2) {
-              c.pp -= 50;
-              c.buildingFactory = {
-                cost: 10,
-                progress: 0,
-                name: "県営工場建設",
-              };
-            }
-          }
-
-          const enemies = Game.wars
-            .filter((w) => w.atk === tag || w.def === tag)
-            .map((w) => (w.atk === tag ? w.def : w.atk));
-          const myUnits = Game.units.filter((u) => u.tag === tag);
-          const armyLimit = Math.min(~~(c.fac * 2 + 5), 80);
-          if (
-            c.mp > 2000 &&
-            myUnits.length < armyLimit &&
-            (enemies.length > 0 || Math.random() < 0.05)
-          ) {
-            let targetTmpl = DB.AITemplates.basic_inf;
-            const roll = Math.random();
-            if (c.fac >= 15) {
-              if (roll < 0.3) targetTmpl = DB.AITemplates.tank_div;
-              else if (roll < 0.5) targetTmpl = DB.AITemplates.mech_div;
-              else if (roll < 0.7) targetTmpl = DB.AITemplates.mot_div;
-              else targetTmpl = DB.AITemplates.strong_inf;
-            } else if (c.fac >= 8) {
-              if (roll < 0.15) targetTmpl = DB.AITemplates.tank_div;
-              else if (roll < 0.4) targetTmpl = DB.AITemplates.bike_div;
-              else targetTmpl = DB.AITemplates.strong_inf;
-            } else {
-              if (roll < 0.3) targetTmpl = DB.AITemplates.bike_div;
-              else targetTmpl = DB.AITemplates.basic_inf;
-            }
-            const stats = Game.calcStats(targetTmpl);
-            if (c.eq >= stats.cost) {
-              c.mp -= 1000;
-              c.eq -= stats.cost;
-              Game.spawnUnit(tag, c.capital, targetTmpl);
-            }
-          }
-
-          const plannedMoves = new Set();
-          myUnits.forEach((u) => {
-            if (u.state === "moving" && u.path.length > 0)
-              plannedMoves.add(u.path[u.path.length - 1].id);
+      const Designer = {
+        current: { bat: [], sup: [] },
+        open: function () {
+          const p = Game.countries[Game.player];
+          if (!p) return;
+          this.current = { bat: [...p.template.bat], sup: [...p.template.sup] };
+          const xpEl = $("ds-xp");
+          if (xpEl) xpEl.innerText = ~~p.xp;
+          $("design-modal").style.display = "flex";
+          this.renderOptions();
+          this.updateGrid();
+        },
+        renderOptions: function () {
+          const batDiv = $("opt-battalions");
+          const supDiv = $("opt-support");
+          if (!batDiv || !supDiv) return;
+          batDiv.innerHTML = "";
+          supDiv.innerHTML = "";
+          Object.keys(DB.UnitTypes).forEach((key) => {
+            const u = DB.UnitTypes[key];
+            const el = $c("div", "unit-opt");
+            el.innerHTML = `<span class="unit-opt-icon">${u.icon}</span><span>${u.name}</span><span style="font-size:10px;color:#aaa;margin-left:auto">Cost:${u.cost}</span>`;
+            el.onclick = () => this.addUnit(key, u.type);
+            if (u.type === "bat") batDiv.appendChild(el);
+            else supDiv.appendChild(el);
           });
-          const idleUnits = myUnits
-            .filter((u) => u.state === "idle" && u.org > 20)
-            .sort(() => Math.random() - 0.5);
-          const frontline = Game.getFrontlineHexes(tag);
-          let actions = 0;
-          const APM = 15;
-
-          // === 戦術AI強化: アンチ戦術分析 ===
-          let currentStrategy = "NORMAL";
-          if (enemies.length > 0) {
-            // 敵の突出部（Blitz）を検知
-            const dangerDist = 150;
-            if (c.capital) {
-              const threat = Game.units.find(
-                (u) =>
-                  u.tag !== tag &&
-                  Game.isWar(tag, u.tag) &&
-                  (u.template.bat.includes("tank") ||
-                    u.template.bat.includes("mech")) &&
-                  Math.hypot(u.x - c.capital.x, u.y - c.capital.y) < dangerDist
-              );
-              if (threat) currentStrategy = "COUNTER_BLITZ";
-            }
-          }
-
-          for (let u of idleUnits) {
-            if (actions >= APM) break;
-
-            // 1. 包囲回避・撤退 (Anti-Encirclement)
-            // 周囲の敵対的タイル数を確認
-            let hostileCount = 0;
-            u.hex.adj.forEach((n) => {
-              if (
-                n.owner !== tag &&
-                n.owner !== "_SEA" &&
-                Game.isWar(tag, n.owner)
-              )
-                hostileCount++;
-            });
-
-            // 3方向以上囲まれているか、補給不足なら撤退
-            if (hostileCount >= 3 || u.org < 20 || u.supply < 20) {
-              if (c.capital) {
-                // 首都へ向かうパスを探す（安全地帯への退避）
-                const path = Input.findPath(u.hex, c.capital, tag);
-                // 近すぎる場合は動かない（パニック防止）
-                if (path && path.length > 1) {
-                  u.path = path.slice(0, 3); // 少しずつ下がる
-                  u.state = "moving";
-                  actions++;
-                  continue;
-                }
-              }
-            }
-
-            // 2. 戦術決定
-            let tactic = DB.Tactics.PUSH;
-
-            if (currentStrategy === "COUNTER_BLITZ") {
-              if (
-                u.template.bat.includes("tank") ||
-                u.template.bat.includes("mot")
-              )
-                tactic = DB.Tactics.ENCIRCLE;
-              else tactic = DB.Tactics.HOLD;
-            } else {
-              if (
-                u.template.bat.includes("tank") ||
-                u.template.bat.includes("mech")
-              )
-                tactic = DB.Tactics.BLITZ;
-              else if (
-                u.template.bat.includes("bike") ||
-                u.template.bat.includes("mot")
-              )
-                tactic = DB.Tactics.ENCIRCLE;
-              else if (enemies.length > 0 && c.provs.length < 5)
-                tactic = DB.Tactics.HOLD;
-            }
-
-            let bestTarget = null;
-            let maxScore = -9999;
-
-            if (tactic === DB.Tactics.BLITZ && enemies.length > 0) {
-              const enemyTag = enemies[0];
-              const enemyCap = Game.countries[enemyTag].capital;
-              if (enemyCap) {
-                const path = Input.findPath(u.hex, enemyCap, tag);
-                if (path && path.length > 0) {
-                  u.path = path.slice(0, 5);
-                  u.state = "moving";
-                  actions++;
-                  plannedMoves.add(u.path[u.path.length - 1].id);
-                  continue;
-                }
-              }
-            }
-
-            u.hex.adj.forEach((n) => {
-              if (n.owner === "_SEA" || n.owner === tag) return;
-              if (!Game.isWar(tag, n.owner)) return;
-              let score = 0;
-              if (plannedMoves.has(n.id)) score -= 200;
-              const enemyUnit = Game.getEnemyInHex(n, tag);
-
-              if (tactic === DB.Tactics.ENCIRCLE) {
-                if (!enemyUnit) score += 300;
-                else score -= 50;
-              } else if (tactic === DB.Tactics.HOLD) {
-                if (enemyUnit) score -= 100;
-              } else {
-                if (!enemyUnit) score += 100;
-                else {
-                  if (enemyUnit.org < 30) score += 50;
-                  else if (u.org < 40) score -= 50;
-                  else score += 10;
-                }
-              }
-              if (score > maxScore) {
-                maxScore = score;
-                bestTarget = n;
-              }
-            });
-
-            if (bestTarget && maxScore > 0) {
-              u.path = [bestTarget];
-              u.state = "moving";
-              actions++;
-              plannedMoves.add(bestTarget.id);
-              continue;
-            }
-
-            if (frontline.length > 0 && Math.random() < 0.3) {
-              const f = frontline[Math.floor(Math.random() * frontline.length)];
-              const d = (u.x - f.x) ** 2 + (u.y - f.y) ** 2;
-              if (d < 10000) {
-                const path = Input.findPath(u.hex, f, tag);
-                if (path && path.length) {
-                  u.path = path.slice(0, 5);
-                  u.state = "moving";
-                  actions++;
-                  plannedMoves.add(path[path.length - 1].id);
-                }
-              }
-            }
-          }
-
-          if (enemies.length === 0) {
-            const neighbors = Game.getNeighbors(tag);
-            if (neighbors.length > 0) {
-              if (
-                c.peaceTimer > 300 &&
-                Math.random() < 0.3 &&
-                myUnits.length > 4
-              ) {
-                const target =
-                  neighbors[Math.floor(Math.random() * neighbors.length)];
-                Game.declareWar(tag, target);
-              }
-            }
+        },
+        addUnit: function (id, type) {
+          if (type === "bat") {
+            if (this.current.bat.length < 9) {
+              this.current.bat.push(id);
+              this.updateGrid();
+            } else UI.notify("主力大隊はこれ以上追加できません", "warn");
+          } else {
+            if (this.current.sup.length < 3 && !this.current.sup.includes(id)) {
+              this.current.sup.push(id);
+              this.updateGrid();
+            } else
+              UI.notify("支援中隊は追加できないか、既に存在します", "warn");
           }
         },
+        removeUnit: function (idx, type) {
+          if (type === "bat") this.current.bat.splice(idx, 1);
+          else this.current.sup.splice(idx, 1);
+          this.updateGrid();
+        },
+        updateGrid: function () {
+          const gb = $("grid-bat");
+          const gs = $("grid-sup");
+          if (!gb || !gs) return;
+          gb.innerHTML = "";
+          gs.innerHTML = "";
+          this.current.bat.forEach((uid, i) => {
+            const u = DB.UnitTypes[uid];
+            const el = $c("div", "slot filled");
+            el.innerHTML = `${u.icon}<div class="rm" onclick="event.stopPropagation();Designer.removeUnit(${i},'bat')">×</div>`;
+            gb.appendChild(el);
+          });
+          for (let i = this.current.bat.length; i < 6; i++) {
+            gb.appendChild($c("div", "slot"));
+          }
+          this.current.sup.forEach((uid, i) => {
+            const u = DB.UnitTypes[uid];
+            const el = $c("div", "slot filled");
+            el.innerHTML = `${u.icon}<div class="rm" onclick="event.stopPropagation();Designer.removeUnit(${i},'sup')">×</div>`;
+            gs.appendChild(el);
+          });
+          for (let i = this.current.sup.length; i < 3; i++) {
+            gs.appendChild($c("div", "slot"));
+          }
+          this.calcPreview();
+        },
+        calcPreview: function () {
+          const s = Game.calcStats(this.current);
+          if ($("ds-atk-s")) $("ds-atk-s").innerText = s.sa.toFixed(1);
+          if ($("ds-atk-h")) $("ds-atk-h").innerText = s.ha.toFixed(1);
+          if ($("ds-def")) $("ds-def").innerText = s.def.toFixed(1);
+          if ($("ds-brk")) $("ds-brk").innerText = s.brk.toFixed(1);
+          if ($("ds-arm")) $("ds-arm").innerText = s.arm.toFixed(1);
+          if ($("ds-cost")) $("ds-cost").innerText = s.cost.toFixed(0);
+        },
+        save: function () {
+          const p = Game.countries[Game.player];
+          const cost = 10;
+          if (p.xp < cost) {
+            UI.notify(`陸軍経験値が足りません (必要: ${cost})`, "warn");
+            return;
+          }
+          if (this.current.bat.length === 0) {
+            UI.notify("少なくとも1つの主力大隊が必要です", "warn");
+            return;
+          }
+          p.xp -= cost;
+          p.template = {
+            bat: [...this.current.bat],
+            sup: [...this.current.sup],
+          };
+          UI.notify("師団編成を保存しました", "success");
+          UI.closeDesigner();
+          UI.update();
+        },
       };
-
       const Game = {
         day: 1,
         speed: 1,
@@ -4313,109 +4248,6 @@
           Renderer.x = screenCX - 800 * Renderer.s;
           Renderer.y = screenCY - 600 * Renderer.s;
           Renderer.update();
-        },
-      };
-
-      const Designer = {
-        current: { bat: [], sup: [] },
-        open: function () {
-          const p = Game.countries[Game.player];
-          if (!p) return;
-          this.current = { bat: [...p.template.bat], sup: [...p.template.sup] };
-          const xpEl = $("ds-xp");
-          if (xpEl) xpEl.innerText = ~~p.xp;
-          $("design-modal").style.display = "flex";
-          this.renderOptions();
-          this.updateGrid();
-        },
-        renderOptions: function () {
-          const batDiv = $("opt-battalions");
-          const supDiv = $("opt-support");
-          if (!batDiv || !supDiv) return;
-          batDiv.innerHTML = "";
-          supDiv.innerHTML = "";
-          Object.keys(DB.UnitTypes).forEach((key) => {
-            const u = DB.UnitTypes[key];
-            const el = $c("div", "unit-opt");
-            el.innerHTML = `<span class="unit-opt-icon">${u.icon}</span><span>${u.name}</span><span style="font-size:10px;color:#aaa;margin-left:auto">Cost:${u.cost}</span>`;
-            el.onclick = () => this.addUnit(key, u.type);
-            if (u.type === "bat") batDiv.appendChild(el);
-            else supDiv.appendChild(el);
-          });
-        },
-        addUnit: function (id, type) {
-          if (type === "bat") {
-            if (this.current.bat.length < 9) {
-              this.current.bat.push(id);
-              this.updateGrid();
-            } else UI.notify("主力大隊はこれ以上追加できません", "warn");
-          } else {
-            if (this.current.sup.length < 3 && !this.current.sup.includes(id)) {
-              this.current.sup.push(id);
-              this.updateGrid();
-            } else
-              UI.notify("支援中隊は追加できないか、既に存在します", "warn");
-          }
-        },
-        removeUnit: function (idx, type) {
-          if (type === "bat") this.current.bat.splice(idx, 1);
-          else this.current.sup.splice(idx, 1);
-          this.updateGrid();
-        },
-        updateGrid: function () {
-          const gb = $("grid-bat");
-          const gs = $("grid-sup");
-          if (!gb || !gs) return;
-          gb.innerHTML = "";
-          gs.innerHTML = "";
-          this.current.bat.forEach((uid, i) => {
-            const u = DB.UnitTypes[uid];
-            const el = $c("div", "slot filled");
-            el.innerHTML = `${u.icon}<div class="rm" onclick="event.stopPropagation();Designer.removeUnit(${i},'bat')">×</div>`;
-            gb.appendChild(el);
-          });
-          for (let i = this.current.bat.length; i < 6; i++) {
-            gb.appendChild($c("div", "slot"));
-          }
-          this.current.sup.forEach((uid, i) => {
-            const u = DB.UnitTypes[uid];
-            const el = $c("div", "slot filled");
-            el.innerHTML = `${u.icon}<div class="rm" onclick="event.stopPropagation();Designer.removeUnit(${i},'sup')">×</div>`;
-            gs.appendChild(el);
-          });
-          for (let i = this.current.sup.length; i < 3; i++) {
-            gs.appendChild($c("div", "slot"));
-          }
-          this.calcPreview();
-        },
-        calcPreview: function () {
-          const s = Game.calcStats(this.current);
-          if ($("ds-atk-s")) $("ds-atk-s").innerText = s.sa.toFixed(1);
-          if ($("ds-atk-h")) $("ds-atk-h").innerText = s.ha.toFixed(1);
-          if ($("ds-def")) $("ds-def").innerText = s.def.toFixed(1);
-          if ($("ds-brk")) $("ds-brk").innerText = s.brk.toFixed(1);
-          if ($("ds-arm")) $("ds-arm").innerText = s.arm.toFixed(1);
-          if ($("ds-cost")) $("ds-cost").innerText = s.cost.toFixed(0);
-        },
-        save: function () {
-          const p = Game.countries[Game.player];
-          const cost = 10;
-          if (p.xp < cost) {
-            UI.notify(`陸軍経験値が足りません (必要: ${cost})`, "warn");
-            return;
-          }
-          if (this.current.bat.length === 0) {
-            UI.notify("少なくとも1つの主力大隊が必要です", "warn");
-            return;
-          }
-          p.xp -= cost;
-          p.template = {
-            bat: [...this.current.bat],
-            sup: [...this.current.sup],
-          };
-          UI.notify("師団編成を保存しました", "success");
-          UI.closeDesigner();
-          UI.update();
         },
       };
 
