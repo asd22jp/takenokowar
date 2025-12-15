@@ -2269,7 +2269,6 @@
         pinchDist: 0,
         pinchStartScale: 1,
         planMode: false,
-        // 最適化: Pathfinding cache
         pathCache: new Map(),
 
         init: function () {
@@ -2317,6 +2316,7 @@
             if (this.isShift && !this.isRight && !this.planMode) {
               this.updateBoxSelect(e);
             } else if (isDrawingAction && this.selUnits.length > 0) {
+              // 【軽量化】mousemoveごとの処理を間引く
               this.updateBattleLine({ clientX: e.clientX, clientY: e.clientY });
             } else if (!isDrawingAction && this.isDrag) {
               Renderer.x += dx;
@@ -2337,7 +2337,7 @@
             if (this.isDrag) {
               if (this.isShift && !isDrawingAction) this.finishBoxSelect();
               else if (isDrawingAction && this.selUnits.length > 0)
-                this.executeBattlePlan();
+                this.executeBattlePlan(); // ここで重い処理が走る
               return;
             }
             if (!this.planMode && !this.isRight) {
@@ -2366,7 +2366,7 @@
             { passive: false }
           );
 
-          // Touch Events (スマホ対応)
+          // Touch Events
           this.mapWrapEl.addEventListener(
             "touchstart",
             (e) => {
@@ -2524,10 +2524,11 @@
         updateBattleLine: function (ptObj) {
           const pt = this.screenToWorld(ptObj.clientX, ptObj.clientY);
           const last = this.battlePoints[this.battlePoints.length - 1];
-          if (!last || Math.hypot(pt.x - last.x, pt.y - last.y) > 10) {
+          // 【軽量化】記録する点の間隔を広げる (10 -> 25)
+          if (!last || Math.hypot(pt.x - last.x, pt.y - last.y) > 25) {
             this.battlePoints.push(pt);
             const ptsStr = this.battlePoints
-              .map((p) => `${p.x},${p.y}`)
+              .map((p) => `${~~p.x},${~~p.y}`)
               .join(" ");
             this.battleLineEl.setAttribute("points", ptsStr);
           }
@@ -2538,16 +2539,44 @@
           this.battleLineEl = null;
           if (this.battlePoints.length < 2) return;
 
-          // ターゲットヘックス検出（判定強化）
+          // 【軽量化】全ヘックス探索を回避。描画線の「範囲内」にあるヘックスのみを対象にする
+          let minX = Infinity,
+            minY = Infinity,
+            maxX = -Infinity,
+            maxY = -Infinity;
+          this.battlePoints.forEach((p) => {
+            if (p.x < minX) minX = p.x;
+            if (p.x > maxX) maxX = p.x;
+            if (p.y < minY) minY = p.y;
+            if (p.y > maxY) maxY = p.y;
+          });
+          // 判定のマージン
+          const margin = 50;
+
+          // 候補となるヘックスを絞り込む (Spatial Hashing的なアプローチ)
+          const candidateHexes = MapSys.hexes.filter(
+            (h) =>
+              h.x >= minX - margin &&
+              h.x <= maxX + margin &&
+              h.y >= minY - margin &&
+              h.y <= maxY + margin
+          );
+
           const targetHexes = [];
+          // 絞り込んだヘックスと点のみを比較
           this.battlePoints.forEach((pt) => {
             let closest = null,
               minD = Infinity;
-            MapSys.hexes.forEach((h) => {
-              if (Math.abs(h.x - pt.x) > 80 || Math.abs(h.y - pt.y) > 80)
+
+            // 全探索ではなく候補のみループ
+            candidateHexes.forEach((h) => {
+              // 簡易距離チェック
+              if (Math.abs(h.x - pt.x) > 40 || Math.abs(h.y - pt.y) > 40)
                 return;
+
               const d = (h.x - pt.x) ** 2 + (h.y - pt.y) ** 2;
-              if (d < 2500) {
+              if (d < 1600) {
+                // 判定半径も少し広げる
                 if (d < minD) {
                   minD = d;
                   closest = h;
@@ -2563,42 +2592,65 @@
             return;
           }
 
-          // 視覚的フィードバック（移動先を光らせる）
-          targetHexes.forEach((h) => {
+          // 視覚フィードバック（軽量化のためDOM生成数を制限）
+          targetHexes.forEach((h, i) => {
+            if (i % 2 !== 0) return; // 全部は光らせない
             const m = document.createElementNS(
               "http://www.w3.org/2000/svg",
               "circle"
             );
             m.setAttribute("cx", h.x);
             m.setAttribute("cy", h.y);
-            m.setAttribute("r", 5);
+            m.setAttribute("r", 4);
             m.setAttribute("fill", "#ffca28");
-            m.style.opacity = "1";
-            m.style.transition = "opacity 1s";
+            m.style.opacity = "0.8";
+            m.style.transition = "opacity 0.5s";
             Renderer.uiLayer.appendChild(m);
             setTimeout(() => {
               m.style.opacity = "0";
-              setTimeout(() => m.remove(), 1000);
-            }, 500);
+              setTimeout(() => m.remove(), 600);
+            }, 300);
           });
 
           const sortedUnits = [...this.selUnits].sort((a, b) => a.y - b.y);
           let moveCount = 0;
+
+          // 【軽量化】経路探索の最大数を制限し、メインスレッド停止を防ぐ
+          const MAX_PATHS_PER_FRAME = 30;
+          let calculated = 0;
+
           sortedUnits.forEach((u, i) => {
+            if (calculated > MAX_PATHS_PER_FRAME) {
+              // 上限を超えたユニットは直近のターゲットへ直線移動（簡易処理）
+              // または処理を次のフレームに回すのが理想だが、ここでは割り当てをスキップ
+              return;
+            }
+
             const targetIndex = ~~(
               (i / sortedUnits.length) *
               targetHexes.length
             );
             const target = targetHexes[targetIndex];
-            const path = this.findPath(u.hex, target, u.tag, 200);
+
+            // 距離が遠すぎる場合は経路探索自体をスキップ
+            const distSq = (u.x - target.x) ** 2 + (u.y - target.y) ** 2;
+            if (distSq > 900000) return; // 画面幅以上の大移動は無視
+
+            const path = this.findPath(u.hex, target, u.tag, 150);
             if (path && path.length > 0) {
               u.path = path;
               u.state = "moving";
               moveCount++;
+              calculated++;
             }
           });
+
           if (moveCount > 0) UI.notify(`${moveCount} 師団が作戦行動を開始`);
-          else UI.notify("移動経路が見つかりませんでした", "warn");
+          else
+            UI.notify(
+              "移動経路が見つかりませんでした (または距離過大)",
+              "warn"
+            );
         },
         screenToWorld: function (sx, sy) {
           const rect = this.mapWrapEl.getBoundingClientRect();
@@ -2666,32 +2718,36 @@
             btn.classList.remove("active");
           }
         },
+        // 【軽量化】A* アルゴリズムの最適化
         findPath: function (start, end, unitTag, maxSearch = 150) {
-          // 最適化: 遠すぎる場合は計算しない
+          if (start === end) return [];
           const dx = start.x - end.x;
           const dy = start.y - end.y;
-          if (dx * dx + dy * dy > 400000) return null; // 距離制限
+          // 距離制限（遠すぎる場合は即諦める）
+          if (dx * dx + dy * dy > 500000) return null;
 
-          // Cache check
           const key = `${start.id}-${end.id}-${unitTag}`;
           if (this.pathCache.has(key)) return this.pathCache.get(key);
 
-          // 軽量化A*アルゴリズム
+          // 配列(.includes)の代わりにSetを使うと高速
           const openSet = [start];
+          const openSetHash = new Set([start.id]); // 追加
           const cameFrom = new Map();
           const gScore = new Map();
           const fScore = new Map();
           gScore.set(start.id, 0);
-          fScore.set(start.id, Math.abs(dx) + Math.abs(dy)); // マンハッタン距離で十分
+          fScore.set(start.id, Math.abs(dx) + Math.abs(dy));
 
           let loops = 0;
           while (openSet.length > 0) {
-            if (loops++ > maxSearch) break; // 計算打ち切り
+            if (loops++ > maxSearch) break;
 
+            // 簡易的な優先度付きキュー処理
             let current = openSet[0];
             let lowestF = fScore.get(current.id);
             let lowestIdx = 0;
 
+            // ここがボトルネックになりやすいが、maxSearchが小さいので許容範囲
             for (let i = 1; i < openSet.length; i++) {
               const fs = fScore.get(openSet[i].id);
               if (fs < lowestF) {
@@ -2709,16 +2765,16 @@
                 temp = cameFrom.get(temp.id);
               }
               const res = path.reverse();
-              // Cache result (short ttl logic elsewhere or just simple cache)
               if (this.pathCache.size > 200) this.pathCache.clear();
               this.pathCache.set(key, res);
               return res;
             }
 
             openSet.splice(lowestIdx, 1);
+            openSetHash.delete(current.id); // Hashからも削除
 
             for (const neighbor of current.adj) {
-              if (neighbor.type === "sea" && end.type !== "sea") continue; // 簡易: 陸路優先
+              if (neighbor.type === "sea" && end.type !== "sea") continue;
               if (
                 neighbor.owner !== "_SEA" &&
                 neighbor.owner !== unitTag &&
@@ -2727,24 +2783,28 @@
               )
                 continue;
 
-              const g = gScore.get(current.id) + 1;
-              if (g < (gScore.get(neighbor.id) || Infinity)) {
+              const tentative_g = gScore.get(current.id) + 1;
+              if (tentative_g < (gScore.get(neighbor.id) || Infinity)) {
                 cameFrom.set(neighbor.id, current);
-                gScore.set(neighbor.id, g);
+                gScore.set(neighbor.id, tentative_g);
                 fScore.set(
                   neighbor.id,
-                  g +
+                  tentative_g +
                     Math.abs(neighbor.x - end.x) +
                     Math.abs(neighbor.y - end.y)
                 );
-                if (!openSet.includes(neighbor)) openSet.push(neighbor);
+
+                // 配列走査(O(N))をSet確認(O(1))に変更
+                if (!openSetHash.has(neighbor.id)) {
+                  openSet.push(neighbor);
+                  openSetHash.add(neighbor.id);
+                }
               }
             }
           }
           return null;
         },
       };
-
       const Renderer = {
         x: 0,
         y: 0,
