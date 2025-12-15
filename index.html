@@ -3158,7 +3158,7 @@
 
           // AI処理の頻度を下げる
           this.aiTimer++;
-          if (this.aiTimer > 8) {
+          if (this.aiTimer > 2) {
             // 元は4、さらに倍に
             const aiBatch = 2; // 一度に処理するAI数を減らす
             const startIdx = (this.day * aiBatch) % tags.length;
@@ -3277,7 +3277,7 @@
               } else if (name.includes("大阪") || name.includes("Osaka")) {
                 this.countries[id].fac = 20;
                 this.countries[id].mp = 800000;
-                this.countries[id].name = "大阪都構想";
+                this.countries[id].name = "大阪都";
               } else if (name.includes("神奈川") || name.includes("Kanagawa")) {
                 this.countries[id].fac = 15;
                 this.countries[id].mp = 700000;
