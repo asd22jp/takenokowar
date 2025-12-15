@@ -4,9 +4,9 @@
     <meta charset="UTF-8" />
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, orientation=landscape"
     />
-    <title>47都道府県大戦</title>
+    <title>都道府県戦線</title>
     <style>
       /* === 全体設定 === */
       body {
@@ -1460,7 +1460,6 @@
       const addF = (id, x, y, t, d, cost, req, eff, mut, cond) =>
         FT.push({ id, x, y, t, d, cost, req, eff, mut, cond });
 
-      // === 都道府県内戦 国家方針 (Hoi4 Mod風) ===
       addF(
         "pol_start",
         1400,
@@ -3294,7 +3293,6 @@
                 ideology:
                   ideologies[Math.floor(Math.random() * ideologies.length)],
               };
-              // === Hoi4 都道府県MOD ネタ要素注入 ===
               if (name.includes("Gunma") || name.includes("群馬")) {
                 this.countries[id].name = "グンマー帝国";
                 this.countries[id].flag = "🏹";
