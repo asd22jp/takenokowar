@@ -6,7 +6,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, orientation=landscape"
     />
-    <title>47都道府県戦</title>
+    <title>都道府県war</title>
     <style>
       /* === 全体設定 === */
       body {
@@ -1522,7 +1522,6 @@
       const FT = [];
       const addF = (id, x, y, t, d, cost, req, eff, mut, cond) =>
         FT.push({ id, x, y, t, d, cost, req, eff, mut, cond });
-
       addF(
         "pol_start",
         1400,
@@ -4247,6 +4246,236 @@
           Renderer.x = screenCX - 800 * Renderer.s;
           Renderer.y = screenCY - 600 * Renderer.s;
           Renderer.update();
+        },
+      };
+      const AI = {
+        runCountry: function (tag) {
+          const c = Game.countries[tag];
+          if (!c || c.provs.length === 0 || c.dead) return;
+
+          // 内政AI: 国家方針の選択
+          if (!c.focus && !c.buildingFactory) {
+            const tree = DB.FocusTree.GENERIC;
+            const available = tree.filter(
+              (f) =>
+                !c.completedFocuses.includes(f.id) &&
+                f.req.every((r) => c.completedFocuses.includes(r)) &&
+                (!f.mut ||
+                  !f.mut.some((m) => c.completedFocuses.includes(m))) &&
+                (!f.cond || f.cond(c))
+            );
+            if (available.length > 0) {
+              c.focus = available[Math.floor(Math.random() * available.length)];
+              c.focusProg = 0;
+            } else if (c.pp >= 70 && Math.random() < 0.2) {
+              c.pp -= 50;
+              c.buildingFactory = {
+                cost: 10,
+                progress: 0,
+                name: "県営工場建設",
+              };
+            }
+          }
+
+          const enemies = Game.wars
+            .filter((w) => w.atk === tag || w.def === tag)
+            .map((w) => (w.atk === tag ? w.def : w.atk));
+          const myUnits = Game.units.filter((u) => u.tag === tag);
+          const armyLimit = Math.min(~~(c.fac * 2 + 5), 80);
+          if (
+            c.mp > 2000 &&
+            myUnits.length < armyLimit &&
+            (enemies.length > 0 || Math.random() < 0.05)
+          ) {
+            let targetTmpl = DB.AITemplates.basic_inf;
+            const roll = Math.random();
+            if (c.fac >= 15) {
+              if (roll < 0.3) targetTmpl = DB.AITemplates.tank_div;
+              else if (roll < 0.5) targetTmpl = DB.AITemplates.mech_div;
+              else if (roll < 0.7) targetTmpl = DB.AITemplates.mot_div;
+              else targetTmpl = DB.AITemplates.strong_inf;
+            } else if (c.fac >= 8) {
+              if (roll < 0.15) targetTmpl = DB.AITemplates.tank_div;
+              else if (roll < 0.4) targetTmpl = DB.AITemplates.bike_div;
+              else targetTmpl = DB.AITemplates.strong_inf;
+            } else {
+              if (roll < 0.3) targetTmpl = DB.AITemplates.bike_div;
+              else targetTmpl = DB.AITemplates.basic_inf;
+            }
+            const stats = Game.calcStats(targetTmpl);
+            if (c.eq >= stats.cost) {
+              c.mp -= 1000;
+              c.eq -= stats.cost;
+              Game.spawnUnit(tag, c.capital, targetTmpl);
+            }
+          }
+
+          const plannedMoves = new Set();
+          myUnits.forEach((u) => {
+            if (u.state === "moving" && u.path.length > 0)
+              plannedMoves.add(u.path[u.path.length - 1].id);
+          });
+          const idleUnits = myUnits
+            .filter((u) => u.state === "idle" && u.org > 20)
+            .sort(() => Math.random() - 0.5);
+          const frontline = Game.getFrontlineHexes(tag);
+          let actions = 0;
+          const APM = 15;
+
+          // === 戦術AI強化: アンチ戦術分析 ===
+          let currentStrategy = "NORMAL";
+          if (enemies.length > 0) {
+            // 敵の突出部（Blitz）を検知
+            const dangerDist = 150;
+            if (c.capital) {
+              const threat = Game.units.find(
+                (u) =>
+                  u.tag !== tag &&
+                  Game.isWar(tag, u.tag) &&
+                  (u.template.bat.includes("tank") ||
+                    u.template.bat.includes("mech")) &&
+                  Math.hypot(u.x - c.capital.x, u.y - c.capital.y) < dangerDist
+              );
+              if (threat) currentStrategy = "COUNTER_BLITZ";
+            }
+          }
+
+          for (let u of idleUnits) {
+            if (actions >= APM) break;
+
+            // 1. 包囲回避・撤退 (Anti-Encirclement)
+            // 周囲の敵対的タイル数を確認
+            let hostileCount = 0;
+            u.hex.adj.forEach((n) => {
+              if (
+                n.owner !== tag &&
+                n.owner !== "_SEA" &&
+                Game.isWar(tag, n.owner)
+              )
+                hostileCount++;
+            });
+
+            // 3方向以上囲まれているか、補給不足なら撤退
+            if (hostileCount >= 3 || u.org < 20 || u.supply < 20) {
+              if (c.capital) {
+                // 首都へ向かうパスを探す（安全地帯への退避）
+                const path = Input.findPath(u.hex, c.capital, tag);
+                // 近すぎる場合は動かない（パニック防止）
+                if (path && path.length > 1) {
+                  u.path = path.slice(0, 3); // 少しずつ下がる
+                  u.state = "moving";
+                  actions++;
+                  continue;
+                }
+              }
+            }
+
+            // 2. 戦術決定
+            let tactic = DB.Tactics.PUSH;
+
+            if (currentStrategy === "COUNTER_BLITZ") {
+              if (
+                u.template.bat.includes("tank") ||
+                u.template.bat.includes("mot")
+              )
+                tactic = DB.Tactics.ENCIRCLE;
+              else tactic = DB.Tactics.HOLD;
+            } else {
+              if (
+                u.template.bat.includes("tank") ||
+                u.template.bat.includes("mech")
+              )
+                tactic = DB.Tactics.BLITZ;
+              else if (
+                u.template.bat.includes("bike") ||
+                u.template.bat.includes("mot")
+              )
+                tactic = DB.Tactics.ENCIRCLE;
+              else if (enemies.length > 0 && c.provs.length < 5)
+                tactic = DB.Tactics.HOLD;
+            }
+
+            let bestTarget = null;
+            let maxScore = -9999;
+
+            if (tactic === DB.Tactics.BLITZ && enemies.length > 0) {
+              const enemyTag = enemies[0];
+              const enemyCap = Game.countries[enemyTag].capital;
+              if (enemyCap) {
+                const path = Input.findPath(u.hex, enemyCap, tag);
+                if (path && path.length > 0) {
+                  u.path = path.slice(0, 5);
+                  u.state = "moving";
+                  actions++;
+                  plannedMoves.add(u.path[u.path.length - 1].id);
+                  continue;
+                }
+              }
+            }
+
+            u.hex.adj.forEach((n) => {
+              if (n.owner === "_SEA" || n.owner === tag) return;
+              if (!Game.isWar(tag, n.owner)) return;
+              let score = 0;
+              if (plannedMoves.has(n.id)) score -= 200;
+              const enemyUnit = Game.getEnemyInHex(n, tag);
+
+              if (tactic === DB.Tactics.ENCIRCLE) {
+                if (!enemyUnit) score += 300;
+                else score -= 50;
+              } else if (tactic === DB.Tactics.HOLD) {
+                if (enemyUnit) score -= 100;
+              } else {
+                if (!enemyUnit) score += 100;
+                else {
+                  if (enemyUnit.org < 30) score += 50;
+                  else if (u.org < 40) score -= 50;
+                  else score += 10;
+                }
+              }
+              if (score > maxScore) {
+                maxScore = score;
+                bestTarget = n;
+              }
+            });
+
+            if (bestTarget && maxScore > 0) {
+              u.path = [bestTarget];
+              u.state = "moving";
+              actions++;
+              plannedMoves.add(bestTarget.id);
+              continue;
+            }
+
+            if (frontline.length > 0 && Math.random() < 0.3) {
+              const f = frontline[Math.floor(Math.random() * frontline.length)];
+              const d = (u.x - f.x) ** 2 + (u.y - f.y) ** 2;
+              if (d < 10000) {
+                const path = Input.findPath(u.hex, f, tag);
+                if (path && path.length) {
+                  u.path = path.slice(0, 5);
+                  u.state = "moving";
+                  actions++;
+                  plannedMoves.add(path[path.length - 1].id);
+                }
+              }
+            }
+          }
+
+          if (enemies.length === 0) {
+            const neighbors = Game.getNeighbors(tag);
+            if (neighbors.length > 0) {
+              if (
+                c.peaceTimer > 300 &&
+                Math.random() < 0.3 &&
+                myUnits.length > 4
+              ) {
+                const target =
+                  neighbors[Math.floor(Math.random() * neighbors.length)];
+                Game.declareWar(tag, target);
+              }
+            }
+          }
         },
       };
 
