@@ -2655,117 +2655,108 @@
           }
         },
         findPath: function (start, end, unitTag, maxSearch = 200) {
-          // 最大探索数を減らす
-          // 距離チェック
-          const distSq = (start.x - end.x) ** 2 + (start.y - end.y) ** 2;
-          if (distSq > 250000) return null; // 500ピクセル以上離れている場合はキャンセル
+          // 1. 基本チェック
+          if (!start || !end) return null;
+          if (start === end) return [];
 
-          // キャッシュシステム
+          // 2. キャッシュチェック
+          // 同じ地点への移動指示を連打した際の負荷を下げるため、直近の結果のみ再利用
           const pathKey = `${start.id}-${end.id}-${unitTag}`;
           if (!this.pathCache) this.pathCache = new Map();
 
-          // キャッシュチェック（10秒間有効）
           const cached = this.pathCache.get(pathKey);
-          if (cached && Game.day - cached.day < 600) {
+          // 2秒以内のキャッシュがあればそれを使う（nullなら「移動不可」という結果を使う）
+          if (cached && Game.day - cached.day < 120) {
             return cached.path;
           }
 
-          // 簡易パス（直線に近い）
-          if (distSq < 10000) {
-            // 100ピクセル以内
-            const simplePath = this.findSimplePath(start, end, unitTag);
-            if (simplePath) {
-              this.pathCache.set(pathKey, { path: simplePath, day: Game.day });
-              return simplePath;
-            }
-          }
+          // 3. A*アルゴリズム変数の初期化
+          const openList = [start]; // 探索候補リスト
+          const closedSet = new Set(); // 探索済みリスト（二度調べない用）
 
-          // A*アルゴリズム（最適化版）
-          const heuristic = (h1, h2) => {
-            // マンハッタン距離で高速化
-            return Math.abs(h1.x - h2.x) + Math.abs(h1.y - h2.y);
-          };
+          const cameFrom = new Map(); // 経路復元用マップ
 
-          const openSet = new Map();
-          const cameFrom = new Map();
-          const gScore = new Map();
-          const fScore = new Map();
-
+          const gScore = new Map(); // スタートからの実コスト
           gScore.set(start.id, 0);
-          fScore.set(start.id, heuristic(start, end));
 
-          // 優先度付きキュー（配列 + ソート）
-          const openNodes = [{ node: start, f: fScore.get(start.id) }];
+          const fScore = new Map(); // 推定総コスト (実コスト + ヒューリスティック)
+          // ヒューリスティック：ゴールまでの直線距離（ユークリッド距離）
+          const getH = (n) => Math.hypot(n.x - end.x, n.y - end.y);
+          fScore.set(start.id, getH(start));
 
-          let limit = 0;
+          let steps = 0;
 
-          while (openNodes.length > 0 && limit++ < maxSearch) {
-            // 最小fスコアのノードを取得
-            openNodes.sort((a, b) => a.f - b.f);
-            const current = openNodes.shift().node;
+          // 4. 探索ループ
+          while (openList.length > 0) {
+            // 安全装置: あまりに回り道すぎる場合は打ち切る（フリーズ防止）
+            if (steps++ > maxSearch) break;
 
+            // fScoreが最も低い（＝ゴールに近そうな）ノードを選ぶ
+            // 毎回ソートすることで、常に最良の候補から調べる
+            openList.sort((a, b) => {
+              const fa = fScore.get(a.id);
+              const fb = fScore.get(b.id);
+              return fa - fb;
+            });
+
+            const current = openList.shift(); // 先頭（最小コスト）を取得
+
+            // ゴール到達！
             if (current === end) {
-              // パス再構築
               const path = [];
-              let node = end;
-              while (node && node !== start) {
-                path.unshift(node);
-                node = cameFrom.get(node.id);
+              let temp = current;
+              while (temp && temp !== start) {
+                path.unshift(temp);
+                temp = cameFrom.get(temp.id);
               }
-
-              if (path.length > 0) {
-                this.pathCache.set(pathKey, { path, day: Game.day });
-
-                // キャッシュサイズ制限
-                if (this.pathCache.size > 500) {
-                  const firstKey = this.pathCache.keys().next().value;
-                  this.pathCache.delete(firstKey);
-                }
-              }
-
+              // 結果をキャッシュして返す
+              this.pathCache.set(pathKey, { path: path, day: Game.day });
+              if (this.pathCache.size > 500) this.pathCache.clear(); // メモリ節約
               return path;
             }
 
-            openSet.delete(current.id);
+            // 現在地を「調査済み」にする
+            closedSet.add(current.id);
 
-            // 隣接ノードの探索
+            // 隣のマスを調べる
             for (const neighbor of current.adj) {
               if (!neighbor) continue;
+              if (closedSet.has(neighbor.id)) continue; // 既に調べた場所はスキップ
 
-              // 移動可否チェック
-              if (
-                neighbor.owner !== "_SEA" &&
-                neighbor.owner !== unitTag &&
-                !Game.isWar(unitTag, neighbor.owner) &&
-                !Game.isAlly(unitTag, neighbor.owner)
-              ) {
+              // --- 通行可否判定 ---
+              const isSea = neighbor.owner === "_SEA";
+              const isMyLand = neighbor.owner === unitTag;
+              const isWarTarget = Game.isWar(unitTag, neighbor.owner);
+              const isAlly = Game.isAlly(unitTag, neighbor.owner);
+
+              // 通れない条件: 海ではなく、自分の土地でもなく、敵地(戦争中)でもなく、同盟国でもない
+              // つまり「中立国」や「通行権のない他国」
+              if (!isSea && !isMyLand && !isWarTarget && !isAlly) {
                 continue;
               }
 
-              const moveCost = neighbor.type === "sea" ? 5 : 1;
-              const tentativeGScore =
-                (gScore.get(current.id) || Infinity) + moveCost;
+              // コスト計算: 基本は1、海は5（海を避けるように動く）
+              const moveCost = isSea ? 5 : 1;
+              const tentativeG = gScore.get(current.id) + moveCost;
 
-              if (tentativeGScore < (gScore.get(neighbor.id) || Infinity)) {
+              // より良い経路が見つかった、または未探索の場合
+              if (
+                !gScore.has(neighbor.id) ||
+                tentativeG < gScore.get(neighbor.id)
+              ) {
                 cameFrom.set(neighbor.id, current);
-                gScore.set(neighbor.id, tentativeGScore);
-                fScore.set(
-                  neighbor.id,
-                  tentativeGScore + heuristic(neighbor, end)
-                );
+                gScore.set(neighbor.id, tentativeG);
+                fScore.set(neighbor.id, tentativeG + getH(neighbor));
 
-                if (!openSet.has(neighbor.id)) {
-                  openSet.set(neighbor.id, true);
-                  openNodes.push({
-                    node: neighbor,
-                    f: fScore.get(neighbor.id),
-                  });
+                // まだ探索候補に入っていなければ追加
+                if (!openList.includes(neighbor)) {
+                  openList.push(neighbor);
                 }
               }
             }
           }
 
-          // パスが見つからなかった場合、キャッシュにnullを保存
+          // 見つからなかった場合
           this.pathCache.set(pathKey, { path: null, day: Game.day });
           return null;
         },
