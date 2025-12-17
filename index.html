@@ -2609,7 +2609,7 @@
           }
         },
         findPath: function (start, end, unitTag, maxSearch = 300) {
-          // デフォルト探索数を200->600に増加
+          // デフォルト探索数を200->300に増加
           const cacheKey = `${start.id}-${end.id}-${unitTag}`;
           if (this.pathCache.has(cacheKey)) {
             const cached = this.pathCache.get(cacheKey);
