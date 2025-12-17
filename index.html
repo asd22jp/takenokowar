@@ -3964,7 +3964,7 @@
           const c = Game.countries[tag];
           if (!c || c.provs.length === 0 || c.dead) return;
 
-          // --- 1. 内政・徴兵 (既存の簡易ロジックを維持) ---
+          // --- 1. 内政・徴兵 (変更なし) ---
           if (!c.focus && !c.buildingFactory) {
             const tree = DB.FocusTree.GENERIC;
             const available = tree.filter(
@@ -3989,9 +3989,8 @@
           }
 
           const myUnits = Game.units.filter((u) => u.tag === tag);
-          const armyLimit = Math.min(~~(c.fac * 2.5 + 5), 100);
-
-          // 徴兵処理
+          // 師団上限を少し緩和（攻撃には数が必要）
+          const armyLimit = Math.min(~~(c.fac * 3 + 5), 120);
           const enemies = Game.wars
             .filter((w) => w.atk === tag || w.def === tag)
             .map((w) => (w.atk === tag ? w.def : w.atk));
@@ -4002,8 +4001,7 @@
             (enemies.length > 0 || Math.random() < 0.1)
           ) {
             let targetTmpl = DB.AITemplates.basic_inf;
-            // 資源があるなら少し良い装備を
-            if (c.fac > 10 && Math.random() < 0.4)
+            if (c.fac > 12 && Math.random() < 0.5)
               targetTmpl = DB.AITemplates.strong_inf;
 
             const stats = Game.calcStats(targetTmpl);
@@ -4014,10 +4012,8 @@
             }
           }
 
-          // --- 2. 戦線構築ロジック (平押しAI) ---
+          // --- 2. 戦線構築と攻撃 (修正版) ---
 
-          // A. 情報を整理する
-          // 前線ヘックス（敵と接している自分の領土）を抽出
           const frontHexes = [];
           c.provs.forEach((p) => {
             const hasEnemy = p.adj.some(
@@ -4029,19 +4025,16 @@
             if (hasEnemy) frontHexes.push(p);
           });
 
-          // ユニットを「前線にいる」「後方にいる」で分類
           const frontlineUnits = [];
           const reserveUnits = [];
-          const occupiedFronts = new Set(); // 既に味方がいる前線プロビ
+          const occupiedFronts = new Set();
 
           myUnits.forEach((u) => {
-            // 移動中のユニットは既に役割を持っているので、目的地を「埋まっている」とみなす
             if (u.state === "moving" && u.path.length > 0) {
               const dest = u.path[u.path.length - 1];
               if (frontHexes.includes(dest)) occupiedFronts.add(dest.id);
               return;
             }
-
             if (frontHexes.includes(u.hex)) {
               frontlineUnits.push(u);
               occupiedFronts.add(u.hex.id);
@@ -4050,18 +4043,17 @@
             }
           });
 
-          // APM制限（1フレームに命令を出す回数制限）
           let actions = 0;
-          const maxActions = 8;
+          // 行動回数を増やして、よりアクティブに動かす
+          const maxActions = 12;
 
-          // B. 前線部隊の処理：目の前の敵を押すか、耐えるか
+          // B. 前線部隊の処理 (ここを攻撃的に修正)
           for (const u of frontlineUnits) {
             if (actions >= maxActions) break;
             if (u.state !== "idle") continue;
 
-            // 補給や組織率が死んでるなら後退
             if (u.org < 20 || u.supply < 20) {
-              // 安全な後方へ
+              // 撤退ロジック
               const safeHex = u.hex.adj.find(
                 (n) => n.owner === tag && !frontHexes.includes(n)
               );
@@ -4073,7 +4065,6 @@
               continue;
             }
 
-            // 接している敵地をリストアップ
             const enemyNeighbors = u.hex.adj.filter(
               (n) =>
                 n.owner !== tag &&
@@ -4081,12 +4072,15 @@
                 Game.isWar(tag, n.owner)
             );
 
-            // 攻撃判断
+            // 自分のマスに味方が他にいるか？ (スタックしているか)
+            // スタックしているなら、自分は攻撃に回っても穴は開かない
+            const isStacked =
+              Game.unitGrid.get(u.hex.id) &&
+              Game.unitGrid.get(u.hex.id).length > 1;
+
             for (const target of enemyNeighbors) {
               const enemyUnit = Game.getEnemyInHex(target, tag);
 
-              // リスク評価: その敵地へ進んだとき、いくつの敵ヘックスに囲まれるか？
-              // (敵地へ突出することを防ぐ)
               let exposure = 0;
               target.adj.forEach((tn) => {
                 if (
@@ -4097,27 +4091,45 @@
                   exposure++;
               });
 
-              // 攻撃GOの条件:
-              // 1. 敵がいない (無血占領) かつ 突出リスクが低い(3方向囲まれない)
-              // 2. 敵がいるが、こちらの組織率が高く(50+)、かつ相手が崩れそう or 側面攻撃(exposureが低い)
-              const canAdvance = !enemyUnit && exposure < 3;
-              const canAttack =
-                enemyUnit && u.org > 50 && (enemyUnit.org < 30 || exposure < 2);
+              // 攻撃判定ロジックの緩和
+              let shouldAttack = false;
 
-              // 確率で攻撃を抑制し、戦線を整える時間を稼ぐ（これが平押しのコツ）
-              if ((canAdvance || canAttack) && Math.random() < 0.2) {
+              if (!enemyUnit) {
+                // 敵がいないなら進む。ただし突出(exposure >=3)は避ける
+                if (exposure < 3) shouldAttack = true;
+              } else {
+                // 敵がいる場合
+
+                // 1. 相手が弱っている (チャンス)
+                if (enemyUnit.org < 30 && u.org > 40) shouldAttack = true;
+
+                // 2. 自分が元気で、相手より優位 (通常攻撃)
+                if (u.org > 60 && u.org > enemyUnit.org) shouldAttack = true;
+
+                // 3. 自分が全快に近い (膠着打破・強行突破)
+                // ※ここが以前の「睨み合い」を防ぐ鍵
+                if (u.org > 90) shouldAttack = true;
+
+                // 4. 数的優位 (スタックしているなら多少無理しても攻める)
+                if (isStacked && u.org > 50) shouldAttack = true;
+
+                // ただし、完全に包囲されるような場所(exposure >= 3)へは、
+                // よほど圧倒的でない限り突っ込まない
+                if (exposure >= 3 && u.org < 95 && !isStacked)
+                  shouldAttack = false;
+              }
+
+              // 攻撃実行 (確率で少しバラけさせるが、確率は高めに設定)
+              if (shouldAttack && Math.random() < 0.4) {
                 u.path = [target];
                 u.state = "moving";
                 actions++;
-                // 移動すると現在の場所が空くので、本当はoccupiedFrontsから外すべきだが、
-                // 交代移動を表現するためにそのままにしておく
                 break;
               }
             }
           }
 
-          // C. 予備戦力の処理：戦線の穴埋め (最優先)
-          // まだ味方が配置されていない前線ヘックスを探す
+          // C. 予備戦力の処理 (ここは維持して戦線の穴を埋める)
           const emptyFronts = frontHexes.filter(
             (h) => !occupiedFronts.has(h.id)
           );
@@ -4127,14 +4139,10 @@
             if (u.state !== "idle") continue;
 
             let target = null;
-
-            // 1. 穴埋め優先
             if (emptyFronts.length > 0) {
-              // 一番近い穴を探す
               let minD = Infinity;
               let bestF = null;
               let bestIdx = -1;
-
               emptyFronts.forEach((f, idx) => {
                 const d = (u.x - f.x) ** 2 + (u.y - f.y) ** 2;
                 if (d < minD) {
@@ -4143,36 +4151,27 @@
                   bestIdx = idx;
                 }
               });
-
               if (bestF) {
                 target = bestF;
-                // その穴は埋まる予定とする
                 emptyFronts.splice(bestIdx, 1);
                 occupiedFronts.add(bestF.id);
               }
-            }
-            // 2. 穴がないなら、敵の首都方面へ向かう (戦略移動)
-            else if (enemies.length > 0) {
-              const eTag = enemies[0];
-              const eCap = Game.countries[eTag]?.capital;
-              if (eCap) {
-                // 首都に一番近い「自分の前線」へ支援に行く
-                let minD = Infinity;
-                let bestF = null;
-                frontHexes.forEach((f) => {
-                  const d = (f.x - eCap.x) ** 2 + (f.y - eCap.y) ** 2;
-                  if (d < minD) {
-                    minD = d;
-                    bestF = f;
-                  }
-                });
-                if (bestF) target = bestF;
-              }
+            } else if (enemies.length > 0) {
+              // 穴がないなら、最も近い前線へ増援に向かう（厚みを作る）
+              let minD = Infinity;
+              let bestF = null;
+              frontHexes.forEach((f) => {
+                const d = (u.x - f.x) ** 2 + (u.y - f.y) ** 2;
+                if (d < minD) {
+                  minD = d;
+                  bestF = f;
+                }
+              });
+              if (bestF) target = bestF;
             }
 
             if (target) {
-              // パス探索 (後方部隊は少し長距離移動してでも定位置につく)
-              const path = Input.findPath(u.hex, target, tag, 500);
+              const path = Input.findPath(u.hex, target, tag, 600);
               if (path && path.length) {
                 u.path = path;
                 u.state = "moving";
@@ -4181,7 +4180,7 @@
             }
           }
 
-          // --- 3. 外交 (宣戦布告) ---
+          // --- 3. 外交 ---
           if (enemies.length === 0 && myUnits.length > 10) {
             const neighbors = Game.getNeighbors(tag);
             if (
