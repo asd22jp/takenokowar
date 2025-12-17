@@ -3990,7 +3990,7 @@
 
           const myUnits = Game.units.filter((u) => u.tag === tag);
           // 師団上限を少し緩和（攻撃には数が必要）
-          const armyLimit = Math.min(~~(c.fac * 3 + 5), 120);
+          const armyLimit = 40;
           const enemies = Game.wars
             .filter((w) => w.atk === tag || w.def === tag)
             .map((w) => (w.atk === tag ? w.def : w.atk));
