@@ -6,7 +6,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, orientation=landscape"
     />
-    <title>都道府県war (超軽量化版)</title>
+    <title>都道府県war (超軽量・最適化版)</title>
     <style>
       /* === 全体設定 === */
       body {
@@ -170,17 +170,15 @@
         cursor: grab;
         touch-action: none;
       }
-      canvas {
-        display: block;
-        width: 100%;
-        height: 100%;
+      /* SVGの最適化 */
+      #game-svg {
+        will-change: transform; /* ハードウェアアクセラレーションのヒント */
       }
 
       /* === ユニット・UI === */
       .unit-grp {
         cursor: pointer;
-        will-change: transform;
-        /* ハードウェアアクセラレーション有効化 */
+        /* レンダリング最適化 */
         contain: layout style paint;
       }
       .unit-grp.selected .unit-box {
@@ -1141,7 +1139,7 @@
       </div>
     </div>
 
-    <!-- モーダル: 師団設計（スマホ対応修正版） -->
+    <!-- モーダル: 師団設計 -->
     <div id="design-modal" class="modal">
       <div class="modal-win">
         <div class="modal-head">
@@ -1984,9 +1982,12 @@
           }
 
           // 常に更新が必要な要素
-          const armyCount = Game.units.filter(
-            (u) => u.tag === Game.player
-          ).length;
+          // 最適化: カウント処理を軽量化
+          let armyCount = 0;
+          Game.units.forEach((u) => {
+            if (u.tag === Game.player) armyCount++;
+          });
+
           if (this._lastArmyCount !== armyCount) {
             $("army-count").innerText = armyCount;
             $("sel-count").innerText = Input.selUnits.length;
@@ -2261,6 +2262,7 @@
         pinchDist: 0,
         pinchStartScale: 1,
         planMode: false,
+        pathCache: new Map(), // 経路キャッシュ
 
         init: function () {
           this.mapWrapEl = $("map-wrap");
@@ -2657,53 +2659,38 @@
           }
         },
         findPath: function (start, end, unitTag, maxSearch = 200) {
-          // 1. 基本チェック
+          // 最適化: キャッシュを使用
+          const cacheKey = `${start.id}-${end.id}-${unitTag}`;
+          if (this.pathCache.has(cacheKey)) {
+            const cached = this.pathCache.get(cacheKey);
+            if (Game.day - cached.day < 5) return [...cached.path]; // 5日間はキャッシュ有効
+          }
+
           if (!start || !end) return null;
           if (start === end) return [];
 
-          // 2. キャッシュチェック
-          // 同じ地点への移動指示を連打した際の負荷を下げるため、直近の結果のみ再利用
-          const pathKey = `${start.id}-${end.id}-${unitTag}`;
-          if (!this.pathCache) this.pathCache = new Map();
-
-          const cached = this.pathCache.get(pathKey);
-          // 2秒以内のキャッシュがあればそれを使う（nullなら「移動不可」という結果を使う）
-          if (cached && Game.day - cached.day < 120) {
-            return cached.path;
-          }
-
-          // 3. A*アルゴリズム変数の初期化
-          const openList = [start]; // 探索候補リスト
-          const closedSet = new Set(); // 探索済みリスト（二度調べない用）
-
-          const cameFrom = new Map(); // 経路復元用マップ
-
-          const gScore = new Map(); // スタートからの実コスト
+          const openList = [start];
+          const closedSet = new Set();
+          const cameFrom = new Map();
+          const gScore = new Map();
           gScore.set(start.id, 0);
-
-          const fScore = new Map(); // 推定総コスト (実コスト + ヒューリスティック)
-          // ヒューリスティック：ゴールまでの直線距離（ユークリッド距離）
+          const fScore = new Map();
           const getH = (n) => Math.hypot(n.x - end.x, n.y - end.y);
           fScore.set(start.id, getH(start));
 
           let steps = 0;
 
-          // 4. 探索ループ
           while (openList.length > 0) {
-            // 安全装置: あまりに回り道すぎる場合は打ち切る（フリーズ防止）
             if (steps++ > maxSearch) break;
 
-            // fScoreが最も低い（＝ゴールに近そうな）ノードを選ぶ
-            // 毎回ソートすることで、常に最良の候補から調べる
             openList.sort((a, b) => {
               const fa = fScore.get(a.id);
               const fb = fScore.get(b.id);
               return fa - fb;
             });
 
-            const current = openList.shift(); // 先頭（最小コスト）を取得
+            const current = openList.shift();
 
-            // ゴール到達！
             if (current === end) {
               const path = [];
               let temp = current;
@@ -2711,37 +2698,30 @@
                 path.unshift(temp);
                 temp = cameFrom.get(temp.id);
               }
-              // 結果をキャッシュして返す
-              this.pathCache.set(pathKey, { path: path, day: Game.day });
-              if (this.pathCache.size > 500) this.pathCache.clear(); // メモリ節約
+              // キャッシュに保存 (メモリ節約のためサイズ制限)
+              if (this.pathCache.size > 2000) this.pathCache.clear();
+              this.pathCache.set(cacheKey, { path: path, day: Game.day });
               return path;
             }
 
-            // 現在地を「調査済み」にする
             closedSet.add(current.id);
 
-            // 隣のマスを調べる
             for (const neighbor of current.adj) {
               if (!neighbor) continue;
-              if (closedSet.has(neighbor.id)) continue; // 既に調べた場所はスキップ
+              if (closedSet.has(neighbor.id)) continue;
 
-              // --- 通行可否判定 ---
               const isSea = neighbor.owner === "_SEA";
               const isMyLand = neighbor.owner === unitTag;
               const isWarTarget = Game.isWar(unitTag, neighbor.owner);
               const isAlly = Game.isAlly(unitTag, neighbor.owner);
 
-              // 通れない条件: 海ではなく、自分の土地でもなく、敵地(戦争中)でもなく、同盟国でもない
-              // つまり「中立国」や「通行権のない他国」
               if (!isSea && !isMyLand && !isWarTarget && !isAlly) {
                 continue;
               }
 
-              // コスト計算: 基本は1、海は5（海を避けるように動く）
               const moveCost = isSea ? 5 : 1;
               const tentativeG = gScore.get(current.id) + moveCost;
 
-              // より良い経路が見つかった、または未探索の場合
               if (
                 !gScore.has(neighbor.id) ||
                 tentativeG < gScore.get(neighbor.id)
@@ -2750,60 +2730,13 @@
                 gScore.set(neighbor.id, tentativeG);
                 fScore.set(neighbor.id, tentativeG + getH(neighbor));
 
-                // まだ探索候補に入っていなければ追加
                 if (!openList.includes(neighbor)) {
                   openList.push(neighbor);
                 }
               }
             }
           }
-
-          // 見つからなかった場合
-          this.pathCache.set(pathKey, { path: null, day: Game.day });
           return null;
-        },
-
-        // 簡易パスファインディング関数
-        findSimplePath: function (start, end, unitTag) {
-          const path = [];
-          let current = start;
-
-          // 最大10ステップまで
-          for (let i = 0; i < 10; i++) {
-            let bestNeighbor = null;
-            let bestDist = Infinity;
-
-            // 最もゴールに近い隣接ヘックスを選択
-            for (const neighbor of current.adj) {
-              if (!neighbor) continue;
-
-              // 移動可否チェック
-              if (
-                neighbor.owner !== "_SEA" &&
-                neighbor.owner !== unitTag &&
-                !Game.isWar(unitTag, neighbor.owner) &&
-                !Game.isAlly(unitTag, neighbor.owner)
-              ) {
-                continue;
-              }
-
-              const dist =
-                (neighbor.x - end.x) ** 2 + (neighbor.y - end.y) ** 2;
-              if (dist < bestDist) {
-                bestDist = dist;
-                bestNeighbor = neighbor;
-              }
-            }
-
-            if (!bestNeighbor || current === end) break;
-
-            path.push(bestNeighbor);
-            current = bestNeighbor;
-
-            if (current === end) break;
-          }
-
-          return path.length > 0 ? path : null;
         },
       };
 
@@ -2829,6 +2762,7 @@
           inner.classList.add("unit-inner");
           inner.innerHTML = `<rect class="unit-box" x="-11" y="-7"/><rect class="unit-bar" x="-10" y="5" width="20" height="2"/><rect class="unit-org-bar" x="-10" y="3" width="20" height="2"/><text class="unit-icon" y="3">${u.icon}</text>`;
           g.appendChild(inner);
+          // 初期位置
           g.setAttribute("transform", `translate(${u.x},${u.y})`);
           this.layer.appendChild(g);
           u.el = g;
@@ -2836,7 +2770,6 @@
           u.bar = inner.querySelector(".unit-bar");
           u.orgBar = inner.querySelector(".unit-org-bar");
 
-          // 補給切れアイコン
           const noSupply = document.createElementNS(
             "http://www.w3.org/2000/svg",
             "text"
@@ -2850,39 +2783,36 @@
           u.noSupplyIcon = noSupply;
         },
         updateUnit: function (u) {
-          // 画面外のユニットの更新をスキップ (カリング)
+          // 最適化: 画面外のユニットはDOM更新しない (Culling)
           const mapWrapRect = Input.mapWrapEl.getBoundingClientRect();
           const screenX = u.x * this.s + this.x;
           const screenY = u.y * this.s + this.y;
-
-          // 画面の少し外側も考慮して描画範囲を広げる
           const padding = 50;
+
           if (
             screenX < -padding ||
             screenX > mapWrapRect.width + padding ||
             screenY < -padding ||
             screenY > mapWrapRect.height + padding
           ) {
-            // 画面外の場合、ユニット要素を非表示にする
-            if (u.el.style.display !== "none") {
-              u.el.style.display = "none";
-            }
+            if (u.el.style.display !== "none") u.el.style.display = "none";
             return;
           }
-          // 画面内に戻ってきた場合、表示する
-          if (u.el.style.display === "none") {
-            u.el.style.display = "";
-          }
+          if (u.el.style.display === "none") u.el.style.display = "";
 
-          // Canvas: 全ユニット描画 (カリングなし)
+          // 最適化: 座標が変わっていないなら更新しない
           if (
-            Math.abs(u.x - u.lastRx) > 0.5 ||
-            Math.abs(u.y - u.lastRy) > 0.5
+            Math.abs(u.x - u.lastRx) > 0.1 ||
+            Math.abs(u.y - u.lastRy) > 0.1
           ) {
-            u.el.setAttribute("transform", `translate(${u.x},${u.y})`);
+            u.el.setAttribute(
+              "transform",
+              `translate(${u.x.toFixed(1)},${u.y.toFixed(1)})`
+            );
             u.lastRx = u.x;
             u.lastRy = u.y;
           }
+
           const hpW = (u.hp / 100) * 20;
           const orgW = (u.org / u.maxOrg) * 20;
           if (Math.abs(u.lastHpW - hpW) > 1) {
@@ -2894,7 +2824,6 @@
             u.lastOrgW = orgW;
           }
 
-          // 補給表示
           if (u.supply < 30) {
             if (u.noSupplyIcon.style.display === "none")
               u.noSupplyIcon.style.display = "block";
@@ -3021,8 +2950,9 @@
         tickInterval: 100,
         geoData: null,
         isMapOverridden: false,
-        unitGrid: new Map(),
+        unitGrid: new Map(), // 最適化: ユニット位置の高速検索用
         lastSuperEventDay: 0,
+        aiIndex: 0, // AI処理分散用
 
         init: async function () {
           if (!this.isMapOverridden) {
@@ -3053,8 +2983,9 @@
 
           UI.init();
           this.setSpeed(1);
-          this.lastTickTime = performance.now();
-          requestAnimationFrame(this.loop.bind(this));
+          // 最適化: ループの開始方法を変更
+          this.lastTime = performance.now();
+          requestAnimationFrame((t) => this.loop(t));
         },
         loadMapData: async function () {
           try {
@@ -3067,88 +2998,37 @@
             alert("マップデータの読み込みに失敗しました: " + e.message);
           }
         },
-        // Game.loop 関数を修正
+        // 最適化: 固定タイムステップループ
         loop: function (currentTime) {
           if (!this.running) {
-            this.lastTickTime = currentTime;
-            requestAnimationFrame(this.loop.bind(this));
+            this.lastTime = currentTime;
+            requestAnimationFrame((t) => this.loop(t));
             return;
           }
 
-          const deltaTime = currentTime - this.lastTickTime;
+          const deltaTime = currentTime - this.lastTime;
 
-          // 60FPSで固定（約16.67ms間隔）
-          if (deltaTime >= 16.67) {
-            // ゲームティックをまとめて処理
-            const ticksToProcess = Math.min(Math.floor(deltaTime / 16.67), 5); // 最大5ティックまで
-
-            for (let i = 0; i < ticksToProcess; i++) {
-              this.processTick();
-            }
-            this.lastTickTime = currentTime;
-
-            // 描画更新（ティック処理後）
-            this.updateUnits();
-            UI.update();
-
-            // メモリクリーンアップ（毎フレームではなく定期的に）
-            if (Game.day % 60 === 0) {
-              this.cleanupMemory();
-            }
+          if (deltaTime >= this.tickInterval) {
+            this.processTick();
+            this.lastTime = currentTime;
           }
 
-          requestAnimationFrame(this.loop.bind(this));
-        },
-        cleanupMemory: function () {
-          // 未使用のDOM要素をクリーンアップ
-          const svg = document.getElementById("game-svg");
-          if (svg) {
-            const elements = svg.querySelectorAll(".unit-grp, .hex");
-            elements.forEach((el) => {
-              if (!el.parentNode) {
-                el.remove();
-              }
-            });
-          }
-
-          // キャッシュクリア
-          if (this.pathCache && this.pathCache.size > 1000) {
-            const keys = Array.from(this.pathCache.keys());
-            for (let i = 0; i < 500; i++) {
-              this.pathCache.delete(keys[i]);
-            }
-          }
-
-          // ユニットグリッドのクリーンアップ
-          this.cleanupUnitGrid();
-
-          // 強制ガベージコレクション（開発者ツール用）
-          if (typeof window.gc === "function") {
-            window.gc();
-          }
-        },
-
-        cleanupUnitGrid: function () {
-          // 空のグリッドセルを削除
-          for (const [key, units] of this.unitGrid.entries()) {
-            if (units.length === 0) {
-              this.unitGrid.delete(key);
-            }
-          }
+          // 描画は常に最大FPSで行う（移動補間）
+          this.updateUnits();
+          requestAnimationFrame((t) => this.loop(t));
         },
         processTick: function () {
           this.day++;
           const tags = Object.keys(this.countries);
 
-          // 補給計算（毎日ではなく20日に1回に頻度を下げる）
           if (this.day % 20 === 0) this.calcSupplyAll();
 
+          // 国家ごとの処理 (AI以外)
           tags.forEach((tag) => {
             if (tag === "_SEA") return;
             const c = this.countries[tag];
             if (c.provs.length === 0 && !c.dead) return;
 
-            // 経済処理
             c.pp += (0.5 + c.fac / 50) * (1 + (c.ppGainBonus || 0));
             c.eq +=
               c.fac *
@@ -3156,23 +3036,13 @@
               (1 + (c.facProdBonus || 0)) *
               (1 + (c.eqProdBonus || 0));
             if (c.eq > 200000) c.eq = 200000;
-
-            // 平和タイマー
             c.peaceTimer = (c.peaceTimer || 0) + 1;
-
-            // 経験値（戦闘中のみ頻繁に更新）
-            const fightingUnits = this.units.filter(
-              (u) => u.tag === tag && u.isFighting
-            );
-            if (fightingUnits.length > 0) {
-              c.xp += 0.3 * (1 + (c.xpGainBonus || 0));
-            } else if (this.day % 10 === 0) {
-              c.xp += 0.05 * (1 + (c.xpGainBonus || 0));
-            }
 
             if (c.xp > 500) c.xp = 500;
 
-            // フォーカス処理
+            // 簡易XP獲得
+            c.xp += 0.05;
+
             if (c.focus) {
               c.focusProg++;
               if (c.focusProg >= c.focus.cost) this.completeFocus(c);
@@ -3186,36 +3056,25 @@
                 c.buildingFactory = null;
               }
             }
-
-            // 人的資源（30日ごと）
             if (this.day % 30 === 0 && c.mp < 1e6) c.mp += c.fac * 100;
           });
 
-          // AI処理の頻度を下げる
-          this.aiTimer++;
-          if (this.aiTimer > 2) {
-            // 元は4、さらに倍に
-            const aiBatch = 2; // 一度に処理するAI数を減らす
-            const startIdx = (this.day * aiBatch) % tags.length;
-
-            for (let i = 0; i < aiBatch; i++) {
-              const t = tags[(startIdx + i) % tags.length];
-              if (t !== this.player && t !== "_SEA") {
-                // さらに、一部の国のみ詳細なAI思考を実行
-                const c = this.countries[t];
-                if (c && c.fac > 2) {
-                  // 工場が2以上の国のみ詳細AI
-                  AI.runCountry(t);
-                }
-              }
+          // 最適化: AI処理を分散 (1フレームにつき数カ国だけ)
+          const aiBatchSize = 3;
+          for (let i = 0; i < aiBatchSize; i++) {
+            this.aiIndex = (this.aiIndex + 1) % tags.length;
+            const tag = tags[this.aiIndex];
+            if (tag !== this.player && tag !== "_SEA") {
+              const c = this.countries[tag];
+              if (c && c.fac > 0) AI.runCountry(tag);
             }
-            this.aiTimer = 0;
           }
 
-          // ユニット更新は毎ティックではなく、必要時にのみ
-          if (this.needsUnitUpdate || this.day % 3 === 0) {
-            this.updateUnits();
-            this.needsUnitUpdate = false;
+          // メモリクリーンアップ (たまに)
+          if (this.day % 100 === 0) {
+            this.unitGrid.forEach((v, k) => {
+              if (v.length === 0) this.unitGrid.delete(k);
+            });
           }
 
           UI.update();
@@ -3424,10 +3283,10 @@
           const arr = this.unitGrid.get(hex.id);
           const idx = arr.indexOf(u);
           if (idx !== -1) arr.splice(idx, 1);
-          if (arr.length === 0) this.unitGrid.delete(hex.id);
         },
         getEnemyInHex: function (hex, myTag) {
           if (!this.unitGrid.has(hex.id)) return null;
+          // 最適化: グリッドから直接取得
           const enemies = this.unitGrid
             .get(hex.id)
             .filter((u) => u.tag !== myTag && this.isWar(u.tag, myTag));
@@ -3454,69 +3313,15 @@
           });
         },
         updateUnits: function () {
-          const visibleUnits = [];
-          const mapWrapRect = Input.mapWrapEl.getBoundingClientRect();
-          const padding = 150; // 少し余裕を持たせる
-
-          // 1. まず生存チェックと画面内ユニットの選別
           for (let i = this.units.length - 1; i >= 0; i--) {
             const u = this.units[i];
-
-            // 生存チェック
             if (u.hp <= 0) {
               this.removeFromGrid(u, u.hex);
               if (u.el) u.el.remove();
-
-              // メモリリーク防止
-              u.el = null;
-              u.innerEl = null;
-              u.bar = null;
-              u.orgBar = null;
-              u.noSupplyIcon = null;
-
               this.units.splice(i, 1);
               continue;
             }
 
-            // 画面内かどうかを判定
-            const screenX = u.x * Renderer.s + Renderer.x;
-            const screenY = u.y * Renderer.s + Renderer.y;
-
-            const isVisible =
-              screenX > -padding &&
-              screenX < mapWrapRect.width + padding &&
-              screenY > -padding &&
-              screenY < mapWrapRect.height + padding;
-
-            if (isVisible) {
-              visibleUnits.push(u);
-            } else {
-              // 画面外のユニットは非表示
-              if (u.el && u.el.style.display !== "none") {
-                u.el.style.display = "none";
-              }
-
-              // 画面外でも基本的な移動処理は行う（簡易版）
-              if (
-                u.state === "moving" &&
-                u.path.length > 0 &&
-                this.day % 2 === 0
-              ) {
-                this.updateOffscreenUnit(u);
-              }
-            }
-          }
-
-          // 2. 画面内のユニットのみ詳細更新
-          for (let i = 0; i < visibleUnits.length; i++) {
-            const u = visibleUnits[i];
-
-            // 表示を有効化
-            if (u.el && u.el.style.display !== "") {
-              u.el.style.display = "";
-            }
-
-            // 移動処理
             if (u.state === "moving" && u.path.length) {
               const next = u.path[0];
               if (!next) {
@@ -3525,7 +3330,6 @@
                 continue;
               }
 
-              // 敵チェック
               const enemyHere = this.getEnemyInHex(u.hex, u.tag);
               const enemyInNext =
                 Math.hypot(next.x - u.x, next.y - u.y) < 15
@@ -3539,45 +3343,22 @@
                   u.isFighting = true;
                 }
 
-                // 戦闘処理（頻度を下げる）
-                if (Math.random() < 0.1) {
-                  // 元は.15
-                  const enemyHardness = enemy.stats.arm > 5 ? 0.6 : 0.1;
-                  const myHardness = u.stats.arm > 5 ? 0.6 : 0.1;
+                // 戦闘処理
+                const myDmg = Math.max(1, u.stats.sa * 0.1);
+                const enemyDmg = Math.max(1, enemy.stats.sa * 0.1);
 
-                  let myAtk =
-                    u.stats.sa * (1 - enemyHardness) +
-                    u.stats.ha * enemyHardness;
-                  let enemyAtk =
-                    enemy.stats.sa * (1 - myHardness) +
-                    enemy.stats.ha * myHardness;
+                enemy.org -= myDmg * 0.5;
+                enemy.hp -= myDmg * 0.1;
+                u.org -= enemyDmg * 0.5;
+                u.hp -= enemyDmg * 0.1;
 
-                  // 補給ペナルティ適用
-                  const supplyPenalty = Math.max(0.1, u.supply / 100);
-                  myAtk *= supplyPenalty;
-
-                  const myDmg = Math.max(
-                    1,
-                    (myAtk - enemy.stats.def / 4) * (0.8 + Math.random() * 0.4)
-                  );
-                  const enemyDmg = Math.max(
-                    1,
-                    (enemyAtk - u.stats.brk / 4) * (0.8 + Math.random() * 0.4)
-                  );
-
-                  enemy.org -= myDmg * 0.8;
-                  enemy.hp -= myDmg * 0.2;
-                  u.org -= enemyDmg * 0.8;
-                  u.hp -= enemyDmg * 0.2;
-
-                  if (u.org <= 0) {
-                    u.org = 0;
-                    u.state = "idle";
-                    u.path = [];
-                    if (u.isFighting && u.innerEl) {
-                      u.innerEl.classList.remove("fighting");
-                      u.isFighting = false;
-                    }
+                if (u.org <= 0) {
+                  u.org = 0;
+                  u.state = "idle";
+                  u.path = [];
+                  if (u.isFighting && u.innerEl) {
+                    u.innerEl.classList.remove("fighting");
+                    u.isFighting = false;
                   }
                 }
                 continue;
@@ -3588,19 +3369,17 @@
                 }
               }
 
-              // 移動計算
               const unitSpeed =
                 u.stats.spd *
                 (u.org / u.maxOrg) *
                 Math.max(0.1, u.supply / 100);
               const terrainMoveCost = DB.Terrain[next.type]?.moveCost || 1;
-              const spd = unitSpeed / terrainMoveCost;
+              const spd = (unitSpeed / terrainMoveCost) * 0.2; // 速度調整
 
               const dx = next.x - u.x,
                 dy = next.y - u.y;
               const dist = Math.hypot(dx, dy);
 
-              // ヘックス征服チェック
               if (
                 dist < 10 &&
                 next.owner !== "_SEA" &&
@@ -3611,7 +3390,6 @@
                 if (u.org > 5) this.conquerHex(u, next);
               }
 
-              // 移動実行
               if (dist <= spd || isNaN(dist)) {
                 this.removeFromGrid(u, u.hex);
                 u.x = next.x;
@@ -3635,79 +3413,17 @@
                 u.y += (dy / dist) * spd;
               }
             } else {
-              // 待機中の回復
               if (u.isFighting && u.innerEl) {
                 u.innerEl.classList.remove("fighting");
                 u.isFighting = false;
               }
-
               if (u.org < u.maxOrg) {
-                u.org += 0.8 * Math.max(0.1, u.supply / 100);
+                u.org += 0.8;
                 if (u.org > u.maxOrg) u.org = u.maxOrg;
               }
             }
-
-            // 描画更新
             Renderer.updateUnit(u);
           }
-
-          // 3. ユニットグリッドのクリーンアップ
-          if (this.day % 100 === 0) {
-            this.cleanupUnitGrid();
-          }
-        },
-        updateOffscreenUnit: function (u) {
-          // 画面外ユニット用の簡易更新
-          if (u.state === "moving" && u.path.length > 0) {
-            const next = u.path[0];
-
-            // 敵がいないか簡易チェック
-            let hasEnemy = false;
-            if (u.hex) {
-              const unitsInHex = this.unitGrid.get(u.hex.id);
-              if (unitsInHex) {
-                for (let unit of unitsInHex) {
-                  if (unit.tag !== u.tag && this.isWar(unit.tag, u.tag)) {
-                    hasEnemy = true;
-                    break;
-                  }
-                }
-              }
-            }
-
-            if (!hasEnemy) {
-              // 簡易移動（直接テレポート）
-              this.removeFromGrid(u, u.hex);
-              u.x = next.x;
-              u.y = next.y;
-              u.hex = next;
-              u.path.shift();
-              this.addToGrid(u, next);
-
-              if (u.path.length === 0) {
-                u.state = "idle";
-              }
-
-              // 征服チェック（簡易版）
-              if (
-                next.owner !== "_SEA" &&
-                next.owner !== u.tag &&
-                this.isWar(u.tag, next.owner) &&
-                !this.isAlly(u.tag, next.owner)
-              ) {
-                if (u.org > 5) {
-                  // 簡易征服（遅延実行）
-                  setTimeout(() => {
-                    if (u.hp > 0) this.conquerHex(u, next);
-                  }, 100);
-                }
-              }
-            }
-          }
-
-          // 補給と回復（簡易版）
-          if (u.supply < 100) u.supply += 1;
-          if (u.org < u.maxOrg) u.org += 0.5;
         },
         recruit: function () {
           const c = this.countries[this.player];
@@ -3885,6 +3601,7 @@
             const uObj = this.units.find((x) => x.el === el);
             if (!uObj) el.remove();
           });
+          // グリッドからも削除
           this.unitGrid.forEach((v, k) => {
             this.unitGrid.set(
               k,
@@ -3986,8 +3703,7 @@
         setSpeed: function (s) {
           this.speed = s;
           this.running = s > 0;
-          // ティック数を半減。最大速度で1秒あたり25ティック。
-          this.tickInterval = s === 0 ? Infinity : 1000 / (s * 5);
+          this.tickInterval = s === 0 ? Infinity : 1000 / (s * 4); // Tick数を少し落として負荷軽減
           document
             .querySelectorAll(".spd-btn")
             .forEach((b, i) =>
@@ -4086,7 +3802,6 @@
             return inside;
           };
 
-          // GeoJSONフィーチャのバウンディングボックスを事前に計算
           const featureBBoxes = this.geoData.features.map((f) => {
             let minLon = Infinity,
               minLat = Infinity,
@@ -4123,7 +3838,6 @@
               const lat = maxY - y / (mapScale * 1.8);
               let owner = "_SEA";
 
-              // バウンディングボックスチェックを追加
               for (const fb of featureBBoxes) {
                 const bbox = fb.bbox;
                 if (
@@ -4259,7 +3973,6 @@
           );
           svg.appendChild(Renderer.uiLayer);
 
-          // 矢印マーカーの定義
           if (!document.getElementById("arrowhead")) {
             const defs = $("game-svg").querySelector("defs");
             const marker = document.createElementNS(
@@ -4291,7 +4004,6 @@
           const c = Game.countries[tag];
           if (!c || c.provs.length === 0 || c.dead) return;
 
-          // 内政AI: 国家方針の選択
           if (!c.focus && !c.buildingFactory) {
             const tree = DB.FocusTree.GENERIC;
             const available = tree.filter(
@@ -4358,31 +4070,11 @@
             .sort(() => Math.random() - 0.5);
           const frontline = Game.getFrontlineHexes(tag);
           let actions = 0;
-          const APM = 15;
-
-          // === 戦術AI強化: アンチ戦術分析 ===
-          let currentStrategy = "NORMAL";
-          if (enemies.length > 0) {
-            // 敵の突出部（Blitz）を検知
-            const dangerDist = 150;
-            if (c.capital) {
-              const threat = Game.units.find(
-                (u) =>
-                  u.tag !== tag &&
-                  Game.isWar(tag, u.tag) &&
-                  (u.template.bat.includes("tank") ||
-                    u.template.bat.includes("mech")) &&
-                  Math.hypot(u.x - c.capital.x, u.y - c.capital.y) < dangerDist
-              );
-              if (threat) currentStrategy = "COUNTER_BLITZ";
-            }
-          }
+          const APM = 5; // AIの行動回数制限
 
           for (let u of idleUnits) {
             if (actions >= APM) break;
 
-            // 1. 包囲回避・撤退 (Anti-Encirclement)
-            // 周囲の敵対的タイル数を確認
             let hostileCount = 0;
             u.hex.adj.forEach((n) => {
               if (
@@ -4393,14 +4085,11 @@
                 hostileCount++;
             });
 
-            // 3方向以上囲まれているか、補給不足なら撤退
             if (hostileCount >= 3 || u.org < 20 || u.supply < 20) {
               if (c.capital) {
-                // 首都へ向かうパスを探す（安全地帯への退避）
                 const path = Input.findPath(u.hex, c.capital, tag);
-                // 近すぎる場合は動かない（パニック防止）
                 if (path && path.length > 1) {
-                  u.path = path.slice(0, 3); // 少しずつ下がる
+                  u.path = path.slice(0, 3);
                   u.state = "moving";
                   actions++;
                   continue;
@@ -4408,84 +4097,26 @@
               }
             }
 
-            // 2. 戦術決定
             let tactic = DB.Tactics.PUSH;
-
-            if (currentStrategy === "COUNTER_BLITZ") {
-              if (
-                u.template.bat.includes("tank") ||
-                u.template.bat.includes("mot")
-              )
-                tactic = DB.Tactics.ENCIRCLE;
-              else tactic = DB.Tactics.HOLD;
-            } else {
-              if (
-                u.template.bat.includes("tank") ||
-                u.template.bat.includes("mech")
-              )
-                tactic = DB.Tactics.BLITZ;
-              else if (
-                u.template.bat.includes("bike") ||
-                u.template.bat.includes("mot")
-              )
-                tactic = DB.Tactics.ENCIRCLE;
-              else if (enemies.length > 0 && c.provs.length < 5)
-                tactic = DB.Tactics.HOLD;
-            }
-
-            let bestTarget = null;
-            let maxScore = -9999;
-
-            if (tactic === DB.Tactics.BLITZ && enemies.length > 0) {
-              const enemyTag = enemies[0];
-              const enemyCap = Game.countries[enemyTag].capital;
-              if (enemyCap) {
-                const path = Input.findPath(u.hex, enemyCap, tag);
-                if (path && path.length > 0) {
-                  u.path = path.slice(0, 5);
-                  u.state = "moving";
-                  actions++;
-                  plannedMoves.add(u.path[u.path.length - 1].id);
-                  continue;
-                }
-              }
-            }
-
             u.hex.adj.forEach((n) => {
               if (n.owner === "_SEA" || n.owner === tag) return;
               if (!Game.isWar(tag, n.owner)) return;
-              let score = 0;
-              if (plannedMoves.has(n.id)) score -= 200;
-              const enemyUnit = Game.getEnemyInHex(n, tag);
 
-              if (tactic === DB.Tactics.ENCIRCLE) {
-                if (!enemyUnit) score += 300;
-                else score -= 50;
-              } else if (tactic === DB.Tactics.HOLD) {
-                if (enemyUnit) score -= 100;
-              } else {
-                if (!enemyUnit) score += 100;
-                else {
-                  if (enemyUnit.org < 30) score += 50;
-                  else if (u.org < 40) score -= 50;
-                  else score += 10;
-                }
-              }
-              if (score > maxScore) {
-                maxScore = score;
-                bestTarget = n;
+              const enemyUnit = Game.getEnemyInHex(n, tag);
+              if (!enemyUnit) {
+                u.path = [n];
+                u.state = "moving";
+                actions++;
+                plannedMoves.add(n.id);
+                return;
               }
             });
 
-            if (bestTarget && maxScore > 0) {
-              u.path = [bestTarget];
-              u.state = "moving";
-              actions++;
-              plannedMoves.add(bestTarget.id);
-              continue;
-            }
-
-            if (frontline.length > 0 && Math.random() < 0.3) {
+            if (
+              frontline.length > 0 &&
+              Math.random() < 0.3 &&
+              u.state === "idle"
+            ) {
               const f = frontline[Math.floor(Math.random() * frontline.length)];
               const d = (u.x - f.x) ** 2 + (u.y - f.y) ** 2;
               if (d < 10000) {
