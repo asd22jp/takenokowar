@@ -6,7 +6,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, orientation=landscape"
     />
-    <title>都道府県war (超軽量・最適化版)</title>
+    <title>都道府県war (高速化・修正版)</title>
     <style>
       /* === 全体設定 === */
       body {
@@ -98,6 +98,8 @@
       .spd-btn.active {
         color: #fff;
         text-shadow: 0 0 5px var(--hl);
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 4px;
       }
 
       /* === レイアウト === */
@@ -173,13 +175,13 @@
       /* SVGの最適化 */
       #game-svg {
         will-change: transform; /* ハードウェアアクセラレーションのヒント */
+        backface-visibility: hidden;
       }
 
       /* === ユニット・UI === */
       .unit-grp {
         cursor: pointer;
-        /* レンダリング最適化 */
-        contain: layout style paint;
+        contain: layout style paint; /* レンダリング最適化 */
       }
       .unit-grp.selected .unit-box {
         stroke: #fff;
@@ -1513,9 +1515,6 @@
         Tactics: {
           BLITZ: { id: "BLITZ", name: "電撃的侵攻", priority: "city" },
           PUSH: { id: "PUSH", name: "正面突破", priority: "front" },
-          HOLD: { id: "HOLD", name: "専守防衛", priority: "defend" },
-          ENCIRCLE: { id: "ENCIRCLE", name: "包囲殲滅", priority: "gap" },
-          REGROUP: { id: "REGROUP", name: "戦略的転進", priority: "retreat" },
         },
       };
 
@@ -1929,46 +1928,21 @@
         P46: { lat: 31.596553, lon: 130.557115 }, // 鹿児島
         P47: { lat: 26.212401, lon: 127.680931 }, // 沖縄
       };
-
       const MapSys = { hexes: [] };
 
       const UI = {
-        _lastValues: {}, // 前回の値を保存するオブジェクト
+        _lastValues: {},
         init: function () {
           this.update();
-          // 初期値で_lastValuesを埋める
-          const p = Game.countries[Game.player];
-          if (p) {
-            this._lastValues.pp = ~~p.pp;
-            this._lastValues.st = p.st;
-            this._lastValues.ws = p.ws;
-            this._lastValues.mp = nFmt(p.mp);
-            this._lastValues.fac = p.fac;
-            this._lastValues.eq = nFmt(p.eq);
-            this._lastValues.xp = ~~p.xp;
-            this._lastValues.tension = Game.tension;
-            this._lastValues.armyCount = Game.units.filter(
-              (u) => u.tag === Game.player
-            ).length;
-            this._lastValues.focusText = ""; // Focus text is dynamic
-            this._lastValues.focusBarWidth = "0%";
-            this._lastValues.tmplStats = ""; // Army template stats
-            this._lastValues.recruitCost = "";
-            this._lastValues.gameDate = "Day " + Game.day;
-            this._lastValues.playerFlag = p.flag;
-          }
         },
         update: function () {
           const p = Game.countries[Game.player];
           if (!p) return;
 
-          // 頻繁に更新する必要のある要素のみ
           const now = Date.now();
-          if (!this.lastUpdateTime || now - this.lastUpdateTime > 500) {
-            // 0.5秒間隔
+          if (!this.lastUpdateTime || now - this.lastUpdateTime > 300) {
             this.lastUpdateTime = now;
 
-            // リソース表示
             $("res-pp").innerText = ~~p.pp;
             $("res-st").innerText = p.st + "%";
             $("res-ws").innerText = p.ws + "%";
@@ -1977,12 +1951,12 @@
             $("res-xp").innerText = ~~p.xp;
             $("res-fac").innerText = p.fac;
 
-            // 日付
-            $("game-date").innerText = "Day " + Game.day;
+            const dObj = new Date(2025, 3, 1 + Game.day);
+            $("game-date").innerText = `${dObj.getFullYear()}/${
+              dObj.getMonth() + 1
+            }/${dObj.getDate()}`;
           }
 
-          // 常に更新が必要な要素
-          // 最適化: カウント処理を軽量化
           let armyCount = 0;
           Game.units.forEach((u) => {
             if (u.tag === Game.player) armyCount++;
@@ -1994,14 +1968,12 @@
             this._lastArmyCount = armyCount;
           }
 
-          // 緊張度
           const tension = Game.tension + "%";
           if (this._lastTension !== tension) {
             $("val-wt").innerText = tension;
             this._lastTension = tension;
           }
 
-          // 国家方針/工場建設の進捗
           let focusText = "";
           let focusBarWidth = "0%";
 
@@ -2262,7 +2234,7 @@
         pinchDist: 0,
         pinchStartScale: 1,
         planMode: false,
-        pathCache: new Map(), // 経路キャッシュ
+        pathCache: new Map(),
 
         init: function () {
           this.mapWrapEl = $("map-wrap");
@@ -2273,7 +2245,6 @@
             if (e.key === "Shift") this.isShift = false;
           });
 
-          // Mouse (PC)
           this.mapWrapEl.addEventListener("mousedown", (e) => {
             this.isDown = true;
             this.isDrag = false;
@@ -2358,7 +2329,6 @@
             { passive: false }
           );
 
-          // Touch Events (スマホ対応)
           this.mapWrapEl.addEventListener(
             "touchstart",
             (e) => {
@@ -2530,7 +2500,6 @@
           this.battleLineEl = null;
           if (this.battlePoints.length < 2) return;
 
-          // ターゲットヘックス検出（判定強化）
           const targetHexes = [];
           this.battlePoints.forEach((pt) => {
             let closest = null,
@@ -2554,25 +2523,6 @@
             UI.notify("有効な移動先が見つかりません", "warn");
             return;
           }
-
-          // 視覚的フィードバック（移動先を光らせる）
-          targetHexes.forEach((h) => {
-            const m = document.createElementNS(
-              "http://www.w3.org/2000/svg",
-              "circle"
-            );
-            m.setAttribute("cx", h.x);
-            m.setAttribute("cy", h.y);
-            m.setAttribute("r", 5);
-            m.setAttribute("fill", "#ffca28");
-            m.style.opacity = "1";
-            m.style.transition = "opacity 1s";
-            Renderer.uiLayer.appendChild(m);
-            setTimeout(() => {
-              m.style.opacity = "0";
-              setTimeout(() => m.remove(), 1000);
-            }, 500);
-          });
 
           const sortedUnits = [...this.selUnits].sort((a, b) => a.y - b.y);
           let moveCount = 0;
@@ -2659,11 +2609,10 @@
           }
         },
         findPath: function (start, end, unitTag, maxSearch = 200) {
-          // 最適化: キャッシュを使用
           const cacheKey = `${start.id}-${end.id}-${unitTag}`;
           if (this.pathCache.has(cacheKey)) {
             const cached = this.pathCache.get(cacheKey);
-            if (Game.day - cached.day < 5) return [...cached.path]; // 5日間はキャッシュ有効
+            if (Game.day - cached.day < 5) return [...cached.path];
           }
 
           if (!start || !end) return null;
@@ -2698,7 +2647,6 @@
                 path.unshift(temp);
                 temp = cameFrom.get(temp.id);
               }
-              // キャッシュに保存 (メモリ節約のためサイズ制限)
               if (this.pathCache.size > 2000) this.pathCache.clear();
               this.pathCache.set(cacheKey, { path: path, day: Game.day });
               return path;
@@ -2750,7 +2698,7 @@
         update: function () {
           $(
             "game-svg"
-          ).style.transform = `translate(${this.x}px, ${this.y}px) scale(${this.s})`;
+          ).style.transform = `translate3d(${this.x}px, ${this.y}px, 0) scale(${this.s})`;
         },
         addUnit: function (u) {
           const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
@@ -2762,13 +2710,17 @@
           inner.classList.add("unit-inner");
           inner.innerHTML = `<rect class="unit-box" x="-11" y="-7"/><rect class="unit-bar" x="-10" y="5" width="20" height="2"/><rect class="unit-org-bar" x="-10" y="3" width="20" height="2"/><text class="unit-icon" y="3">${u.icon}</text>`;
           g.appendChild(inner);
-          // 初期位置
-          g.setAttribute("transform", `translate(${u.x},${u.y})`);
+          g.setAttribute(
+            "transform",
+            `translate(${u.x.toFixed(1)},${u.y.toFixed(1)})`
+          );
           this.layer.appendChild(g);
           u.el = g;
           u.innerEl = inner;
           u.bar = inner.querySelector(".unit-bar");
           u.orgBar = inner.querySelector(".unit-org-bar");
+          u.lastRenderX = u.x;
+          u.lastRenderY = u.y;
 
           const noSupply = document.createElementNS(
             "http://www.w3.org/2000/svg",
@@ -2783,7 +2735,7 @@
           u.noSupplyIcon = noSupply;
         },
         updateUnit: function (u) {
-          // 最適化: 画面外のユニットはDOM更新しない (Culling)
+          // 画面外のユニットはDOM更新しない (Culling)
           const mapWrapRect = Input.mapWrapEl.getBoundingClientRect();
           const screenX = u.x * this.s + this.x;
           const screenY = u.y * this.s + this.y;
@@ -2800,17 +2752,19 @@
           }
           if (u.el.style.display === "none") u.el.style.display = "";
 
-          // 最適化: 座標が変わっていないなら更新しない
+          // 座標が変わっていないならDOMに触らない (Dirty Check)
           if (
-            Math.abs(u.x - u.lastRx) > 0.1 ||
-            Math.abs(u.y - u.lastRy) > 0.1
+            Math.abs(u.x - u.lastRenderX) < 0.1 &&
+            Math.abs(u.y - u.lastRenderY) < 0.1
           ) {
+            // ステータスバーなどの更新チェックのみ行う
+          } else {
             u.el.setAttribute(
               "transform",
               `translate(${u.x.toFixed(1)},${u.y.toFixed(1)})`
             );
-            u.lastRx = u.x;
-            u.lastRy = u.y;
+            u.lastRenderX = u.x;
+            u.lastRenderY = u.y;
           }
 
           const hpW = (u.hp / 100) * 20;
@@ -2936,6 +2890,7 @@
           UI.update();
         },
       };
+
       const Game = {
         day: 1,
         speed: 1,
@@ -2946,13 +2901,14 @@
         wars: [],
         tension: 0,
         aiTimer: 0,
-        lastTickTime: 0,
-        tickInterval: 100,
         geoData: null,
         isMapOverridden: false,
-        unitGrid: new Map(), // 最適化: ユニット位置の高速検索用
+        unitGrid: new Map(),
         lastSuperEventDay: 0,
-        aiIndex: 0, // AI処理分散用
+        aiIndex: 0,
+        accTime: 0,
+        lastTime: 0,
+        tickDuration: 0.25, // 1日が進む基本秒数
 
         init: async function () {
           if (!this.isMapOverridden) {
@@ -2983,7 +2939,6 @@
 
           UI.init();
           this.setSpeed(1);
-          // 最適化: ループの開始方法を変更
           this.lastTime = performance.now();
           requestAnimationFrame((t) => this.loop(t));
         },
@@ -2998,23 +2953,30 @@
             alert("マップデータの読み込みに失敗しました: " + e.message);
           }
         },
-        // 最適化: 固定タイムステップループ
         loop: function (currentTime) {
-          if (!this.running) {
-            this.lastTime = currentTime;
-            requestAnimationFrame((t) => this.loop(t));
-            return;
+          const dt = (currentTime - this.lastTime) / 1000;
+          this.lastTime = currentTime;
+
+          // タブ切り替え直後などの巨大なdtをキャップ
+          const safeDt = Math.min(dt, 0.1);
+
+          if (this.running) {
+            // スピード倍率
+            const speedMultiplier = this.speed === 5 ? 10 : this.speed * 2;
+            const scaledDt = safeDt * speedMultiplier;
+
+            // 日付進行の計算
+            this.accTime += scaledDt;
+            while (this.accTime >= this.tickDuration) {
+              this.processTick();
+              this.accTime -= this.tickDuration;
+            }
+
+            // ユニット移動はフレーム毎になめらかに行う
+            this.updateUnits(scaledDt);
           }
 
-          const deltaTime = currentTime - this.lastTime;
-
-          if (deltaTime >= this.tickInterval) {
-            this.processTick();
-            this.lastTime = currentTime;
-          }
-
-          // 描画は常に最大FPSで行う（移動補間）
-          this.updateUnits();
+          Renderer.update();
           requestAnimationFrame((t) => this.loop(t));
         },
         processTick: function () {
@@ -3037,10 +2999,7 @@
               (1 + (c.eqProdBonus || 0));
             if (c.eq > 200000) c.eq = 200000;
             c.peaceTimer = (c.peaceTimer || 0) + 1;
-
             if (c.xp > 500) c.xp = 500;
-
-            // 簡易XP獲得
             c.xp += 0.05;
 
             if (c.focus) {
@@ -3059,8 +3018,8 @@
             if (this.day % 30 === 0 && c.mp < 1e6) c.mp += c.fac * 100;
           });
 
-          // 最適化: AI処理を分散 (1フレームにつき数カ国だけ)
-          const aiBatchSize = 3;
+          // AI処理を分散 (1フレームにつき2カ国だけ処理)
+          const aiBatchSize = 2;
           for (let i = 0; i < aiBatchSize; i++) {
             this.aiIndex = (this.aiIndex + 1) % tags.length;
             const tag = tags[this.aiIndex];
@@ -3070,7 +3029,6 @@
             }
           }
 
-          // メモリクリーンアップ (たまに)
           if (this.day % 100 === 0) {
             this.unitGrid.forEach((v, k) => {
               if (v.length === 0) this.unitGrid.delete(k);
@@ -3135,8 +3093,8 @@
               } else if (name.includes("Ibaraki") || name.includes("茨城")) {
                 this.countries[id].name = "茨城";
                 this.countries[id].flag = "🍠";
-                this.countries[id].ideology = "茨城"; // あえて普通
-                this.countries[id].mp += 50000; // でも強い
+                this.countries[id].ideology = "茨城";
+                this.countries[id].mp += 50000;
               } else if (name.includes("Chiba") || name.includes("千葉")) {
                 this.countries[id].name = "帝政千葉";
                 this.countries[id].flag = "🥜";
@@ -3161,9 +3119,7 @@
               } else if (name.includes("Tottori") || name.includes("鳥取")) {
                 this.countries[id].name = "鳥取砂丘帝国";
                 this.countries[id].flag = "🐪";
-              }
-              // 主要都市
-              else if (name.includes("東京") || name.includes("Tokyo")) {
+              } else if (name.includes("東京") || name.includes("Tokyo")) {
                 this.countries[id].fac = 25;
                 this.countries[id].mp = 1000000;
                 this.countries[id].name = "帝都東京";
@@ -3263,8 +3219,8 @@
             template: tmplCopy,
             stats: stats,
             icon: DB.UnitTypes[tmplCopy.bat[0]].icon,
-            lastRx: 0,
-            lastRy: 0,
+            lastRenderX: 0,
+            lastRenderY: 0,
             lastHpW: 0,
             lastOrgW: 0,
             isFighting: false,
@@ -3286,7 +3242,6 @@
         },
         getEnemyInHex: function (hex, myTag) {
           if (!this.unitGrid.has(hex.id)) return null;
-          // 最適化: グリッドから直接取得
           const enemies = this.unitGrid
             .get(hex.id)
             .filter((u) => u.tag !== myTag && this.isWar(u.tag, myTag));
@@ -3312,7 +3267,7 @@
             c.supplyMap = visited;
           });
         },
-        updateUnits: function () {
+        updateUnits: function (dt) {
           for (let i = this.units.length - 1; i >= 0; i--) {
             const u = this.units[i];
             if (u.hp <= 0) {
@@ -3343,9 +3298,8 @@
                   u.isFighting = true;
                 }
 
-                // 戦闘処理
-                const myDmg = Math.max(1, u.stats.sa * 0.1);
-                const enemyDmg = Math.max(1, enemy.stats.sa * 0.1);
+                const myDmg = Math.max(1, u.stats.sa * 0.1) * dt;
+                const enemyDmg = Math.max(1, enemy.stats.sa * 0.1) * dt;
 
                 enemy.org -= myDmg * 0.5;
                 enemy.hp -= myDmg * 0.1;
@@ -3374,7 +3328,8 @@
                 (u.org / u.maxOrg) *
                 Math.max(0.1, u.supply / 100);
               const terrainMoveCost = DB.Terrain[next.type]?.moveCost || 1;
-              const spd = (unitSpeed / terrainMoveCost) * 0.2; // 速度調整
+              const baseSpeed = 10; // 基礎移動速度
+              const step = (unitSpeed / terrainMoveCost) * baseSpeed * dt * 0.7;
 
               const dx = next.x - u.x,
                 dy = next.y - u.y;
@@ -3390,7 +3345,7 @@
                 if (u.org > 5) this.conquerHex(u, next);
               }
 
-              if (dist <= spd || isNaN(dist)) {
+              if (dist <= step || isNaN(dist)) {
                 this.removeFromGrid(u, u.hex);
                 u.x = next.x;
                 u.y = next.y;
@@ -3409,8 +3364,8 @@
 
                 if (u.path.length === 0) u.state = "idle";
               } else {
-                u.x += (dx / dist) * spd;
-                u.y += (dy / dist) * spd;
+                u.x += (dx / dist) * step;
+                u.y += (dy / dist) * step;
               }
             } else {
               if (u.isFighting && u.innerEl) {
@@ -3418,7 +3373,7 @@
                 u.isFighting = false;
               }
               if (u.org < u.maxOrg) {
-                u.org += 0.8;
+                u.org += 5 * dt;
                 if (u.org > u.maxOrg) u.org = u.maxOrg;
               }
             }
@@ -3601,7 +3556,6 @@
             const uObj = this.units.find((x) => x.el === el);
             if (!uObj) el.remove();
           });
-          // グリッドからも削除
           this.unitGrid.forEach((v, k) => {
             this.unitGrid.set(
               k,
@@ -3703,7 +3657,6 @@
         setSpeed: function (s) {
           this.speed = s;
           this.running = s > 0;
-          this.tickInterval = s === 0 ? Infinity : 1000 / (s * 4); // Tick数を少し落として負荷軽減
           document
             .querySelectorAll(".spd-btn")
             .forEach((b, i) =>
@@ -4070,7 +4023,7 @@
             .sort(() => Math.random() - 0.5);
           const frontline = Game.getFrontlineHexes(tag);
           let actions = 0;
-          const APM = 5; // AIの行動回数制限
+          const APM = 5;
 
           for (let u of idleUnits) {
             if (actions >= APM) break;
