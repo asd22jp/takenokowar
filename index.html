@@ -870,7 +870,7 @@
           text-shadow: 0 0 10px #500;
         "
       >
-        都道府県大戦
+        都道府県大戦 
       </div>
       <div style="color: #aaa; margin-bottom: 40px; text-align: center">
         指揮する都道府県を選択セヨ
@@ -1360,9 +1360,9 @@
             name: "普通科",
             icon: "🪖",
             type: "bat",
-            sa: 12,
+            sa: 15, // バフ
             ha: 2,
-            def: 25,
+            def: 20, // ナーフ(膠着防止)
             brk: 5,
             arm: 0,
             prc: 5,
@@ -1402,7 +1402,7 @@
             name: "即応機動",
             icon: "🚚",
             type: "bat",
-            sa: 15,
+            sa: 18, // バフ
             ha: 3,
             def: 20,
             brk: 20,
@@ -1416,7 +1416,7 @@
             name: "機械化",
             icon: "🚙",
             type: "bat",
-            sa: 22,
+            sa: 25,
             ha: 15,
             def: 35,
             brk: 30,
@@ -1430,9 +1430,9 @@
             name: "自転車",
             icon: "🚲",
             type: "bat",
-            sa: 14,
+            sa: 16,
             ha: 2,
-            def: 20,
+            def: 18,
             brk: 12,
             arm: 0,
             prc: 5,
@@ -1558,13 +1558,12 @@
       DB.FocusTree.GENERIC_WAR = FT_WAR;
 
 
-     // 3. GUNMA (Germany) - 修正版
+     // 3. GUNMA (Germany)
       const FT_GUN = [];
       addFocus(FT_GUN, "g_emp", 1400, 100, "帝国の復活", "PP+200, 安定+20%", 700, [], c=>{c.pp+=200;c.st+=20;});
       addFocus(FT_GUN, "g_ind", 1200, 250, "ニューイヤー駅伝強化", "工場+10, 移動+10%", 1000, ["g_emp"], c=>{c.fac+=10; c.speedBonus=0.1;});
       addFocus(FT_GUN, "g_army", 1600, 250, "赤城おろし", "XP+200, 装備+10000", 1000, ["g_emp"], c=>{c.xp+=200;c.eq+=10000;});
       
-      // 戦争頻度調整: コストを700→1500~2000以上に増加
       addFocus(FT_GUN, "g_toch", 1400, 400, "北関東の運命", "栃木へ宣戦布告", 1500, ["g_emp"], c=>{
         UI.notify("グンマー帝国が栃木の領有を主張し、侵攻開始！", "war");
         let tTag = null;
@@ -1587,7 +1586,6 @@
          UI.notify("からっ風ドクトリン採用！");
          c.speedBonus = (c.speedBonus||0) + 0.3; 
       });
-      // 追加
       addFocus(FT_GUN, "g_niig", 1200, 850, "日本海への出口", "新潟へ宣戦", 3000, ["g_ind"], c=>{
          let tTag = null;
          Object.keys(Game.countries).forEach(k => { if(Game.countries[k].name.includes("新潟")) tTag = k; });
@@ -1610,7 +1608,6 @@
       addFocus(FT_TOK, "t_fort", 1700, 250, "要塞化", "防御+10%", 1000, ["t_def"], c=>c.territoryDefBonus=0.1);
       addFocus(FT_TOK, "t_air", 1500, 400, "防空網整備", "工場+3", 1400, ["t_def"], c=>c.fac+=3);
       addFocus(FT_TOK, "t_mob", 1500, 550, "本土決戦準備", "人的+50000", 1400, ["t_air"], c=>c.mp+=50000);
-      // 追加
       addFocus(FT_TOK, "t_nav", 1300, 550, "海軍増強", "工場+5", 1500, ["t_all"], c=>c.fac+=5);
       addFocus(FT_TOK, "t_rad", 1700, 550, "レーダー網", "防御+10%", 1200, ["t_fort"], c=>c.territoryDefBonus+=0.1);
       addFocus(FT_TOK, "t_com", 1300, 700, "諸島統合", "人的+30000, PP+100", 1500, ["t_nav"], c=>{c.mp+=30000;c.pp+=100;});
@@ -1624,7 +1621,6 @@
       addFocus(FT_SAI, "s_mag", 1500, 250, "サイタマ・ライン", "防御+20%, 工場+2", 1400, ["s_pol"], c=>{c.territoryDefBonus=0.2;c.fac+=2;});
       addFocus(FT_SAI, "s_ref", 1300, 400, "政府改革", "PP+200, 安定+20%", 1400, ["s_pol"], c=>{c.pp+=200;c.st+=20;});
       addFocus(FT_SAI, "s_ext", 1700, 400, "現状維持", "人的+10000", 700, ["s_pol"], c=>c.mp+=10000);
-      // 追加
       addFocus(FT_SAI, "s_ext2", 1500, 550, "サイタマライン延長", "防御+10%", 1200, ["s_mag"], c=>c.territoryDefBonus+=0.1);
       addFocus(FT_SAI, "s_com", 1300, 550, "共産化ルート", "人的+50000", 1500, ["s_ref"], c=>c.mp+=50000);
       addFocus(FT_SAI, "s_ent", 1700, 550, "小協商", "PP+100", 1000, ["s_ext"], c=>c.pp+=100);
@@ -1639,7 +1635,6 @@
       addFocus(FT_HOK, "h_purge", 1700, 250, "大粛清", "将校追放: XP-50, PP+200", 1400, ["h_rev"], c=>{c.xp-=50;c.pp+=200;});
       addFocus(FT_HOK, "h_mass", 1500, 400, "人海戦術", "人的+200000", 1400, ["h_ind","h_purge"], c=>c.mp+=200000);
       addFocus(FT_HOK, "h_tank", 1500, 550, "T-34量産", "工場+5, 装備+10000", 1400, ["h_mass"], c=>{c.fac+=5;c.eq+=10000;});
-      // 追加
       addFocus(FT_HOK, "h_south", 1500, 700, "南下政策", "東北(青森)へ宣戦布告", 1000, ["h_mass"], c=>{
          UI.notify("北海ソビエトが南下を開始！東北へ侵攻！", "war");
          let tTag = null;
@@ -3128,10 +3123,9 @@
             supply: 100,
           };
           this.units.push(u);
-          this.addToGrid(u, hex); // <--- THIS IS LINE 3126
+          this.addToGrid(u, hex);
           Renderer.addUnit(u);
         },
-        // --- ADDED: Functions for unit grid management and combat ---
         addToGrid: function(unit, hex) {
             if (!this.unitGrid.has(hex.id)) {
                 this.unitGrid.set(hex.id, []);
@@ -3159,20 +3153,20 @@
         },
 
         updateUnits: function (dt) {
-            const moveSpeed = 50; // Pixels per second at base speed
-            const unitMoveFactor = 0.5; // How much of the unit's speed stat affects actual movement speed
+            const moveSpeed = 50;
+            const unitMoveFactor = 0.5;
 
             for (let i = this.units.length - 1; i >= 0; i--) {
                 const u = this.units[i];
-                if (!u.el) continue; // Ensure element exists for rendering
+                if (!u.el) continue;
 
                 // Supply decay
-                u.supply -= 0.05 * dt; // Decay over time
+                u.supply -= 0.05 * dt;
                 if (u.supply < 0) u.supply = 0;
 
                 // Organization recovery
                 if (u.org < u.maxOrg) {
-                    u.org += 0.5 * dt; // Recover slowly
+                    u.org += 0.5 * dt;
                     if (u.org > u.maxOrg) u.org = u.maxOrg;
                 }
 
@@ -3181,8 +3175,11 @@
                     this.removeFromGrid(u, u.hex);
                     u.el.remove();
                     this.units.splice(i, 1);
-                    Input.selUnits = Input.selUnits.filter(su => su !== u); // Remove from selected units
-                    UI.notify(`${this.countries[u.tag].name} の師団が壊滅！`, "danger");
+                    Input.selUnits = Input.selUnits.filter(su => su !== u);
+                    // 【修正】プレイヤーの部隊か、重要な戦いのみ通知する（スパム防止）
+                    if (u.tag === this.player) {
+                        UI.notify(`我が軍の師団が壊滅しました！`, "danger");
+                    }
                     continue;
                 }
 
@@ -3193,24 +3190,24 @@
                     const actualMoveSpeed = (moveSpeed + u.stats.spd * unitMoveFactor) * dt;
 
                     if (distToTarget <= actualMoveSpeed) {
-                        // Reached next hex
                         u.x = nextHex.x;
                         u.y = nextHex.y;
 
-                        // Remove from old hex grid, add to new
                         this.removeFromGrid(u, u.hex);
                         u.hex = nextHex;
                         this.addToGrid(u, u.hex);
 
-                        u.path.shift(); // Remove current hex from path
+                        u.path.shift();
 
-                        // Check for conquest
+                        // Conquest
                         if (u.hex.owner !== u.tag && !this.isWar(u.tag, u.hex.owner) && u.hex.owner !== "_SEA") {
                             this.conquerHex(u, u.hex);
-                            UI.notify(`${this.countries[u.tag].name} が ${this.countries[u.hex.owner].name} を占領！`, "success");
+                            if (u.tag === this.player) {
+                                UI.notify(`${this.countries[u.hex.owner].name} の領土を占領！`, "success");
+                            }
                         }
 
-                        // Check for battle
+                        // Battle Check
                         const enemyUnits = this.unitGrid.get(u.hex.id)?.filter(eu => eu.tag !== u.tag && this.isWar(u.tag, eu.tag));
                         if (enemyUnits && enemyUnits.length > 0) {
                             u.state = "fighting";
@@ -3226,7 +3223,6 @@
                             u.innerEl.classList.remove("fighting");
                         }
                     } else {
-                        // Move towards next hex
                         const angle = Math.atan2(nextHex.y - u.y, nextHex.x - u.x);
                         u.x += Math.cos(angle) * actualMoveSpeed;
                         u.y += Math.sin(angle) * actualMoveSpeed;
@@ -3238,17 +3234,16 @@
                 if (u.state === "fighting" && unitsInHex && unitsInHex.length > 1) {
                     this.battle(u.hex);
                 } else if (u.state === "fighting" && (!unitsInHex || unitsInHex.filter(eu => eu.tag !== u.tag && this.isWar(u.tag, eu.tag)).length === 0)) {
-                    u.state = "idle"; // No more enemies in hex, stop fighting
+                    u.state = "idle";
                     u.innerEl.classList.remove("fighting");
                 }
 
                 // Apply supply effects
                 if (u.supply < 30) {
-                    u.org -= 1 * dt; // Org loss due to low supply
+                    u.org -= 1 * dt;
                     if (u.org < 0) u.org = 0;
                 }
 
-                // Update unit rendering
                 Renderer.updateUnit(u);
             }
         },
@@ -3257,7 +3252,6 @@
             const unitsInHex = this.unitGrid.get(hex.id);
             if (!unitsInHex || unitsInHex.length < 2) return;
 
-            // Group units by tag
             const factions = {};
             unitsInHex.forEach(u => {
                 if (!factions[u.tag]) factions[u.tag] = [];
@@ -3265,9 +3259,8 @@
             });
 
             const tags = Object.keys(factions);
-            if (tags.length < 2) return; // Only one faction, no battle
+            if (tags.length < 2) return;
 
-            // Find two opposing factions for simplicity
             let attackerTag = null;
             let defenderTag = null;
             for(let i = 0; i < tags.length; i++) {
@@ -3281,16 +3274,15 @@
                 if (attackerTag) break;
             }
 
-            if (!attackerTag || !defenderTag) return; // No opposing factions found
+            if (!attackerTag || !defenderTag) return;
 
             const attackers = factions[attackerTag];
             const defenders = factions[defenderTag];
 
-            // Calculate combined stats
             const getCombinedStats = (units) => {
                 let sa = 0, ha = 0, def = 0, brk = 0, arm = 0, org = 0, count = 0;
                 units.forEach(u => {
-                    if (u.org > 0) { // Only fighting units contribute
+                    if (u.org > 0) {
                         sa += u.stats.sa;
                         ha += u.stats.ha;
                         def += u.stats.def;
@@ -3307,7 +3299,6 @@
             const defStats = getCombinedStats(defenders);
 
             if (attStats.count === 0 || defStats.count === 0) {
-                // Battle ended if one side has no more fighting units
                 unitsInHex.forEach(u => {
                     u.state = "idle";
                     u.innerEl.classList.remove("fighting");
@@ -3315,62 +3306,78 @@
                 return;
             }
 
-            // Apply defense bonus from terrain/owner
             let defBonus = 1;
             if (hex.owner === defenderTag) {
                 defBonus += (this.countries[defenderTag].territoryDefBonus || 0);
             }
-            // Apply war support effects to organization
-            const attOrgFactor = 1 + (this.countries[attackerTag].ws / 100 - 0.5); // Higher WS means better org
+            const attOrgFactor = 1 + (this.countries[attackerTag].ws / 100 - 0.5);
             const defOrgFactor = 1 + (this.countries[defenderTag].ws / 100 - 0.5);
 
-            // Damage calculation (simplified)
-            const attackPower = Math.max(0, attStats.sa * attStats.org/100 * attOrgFactor);
-            const defensePower = Math.max(0, defStats.def * defStats.org/100 * defBonus * defOrgFactor);
-            const breakthroughPower = Math.max(0, attStats.brk * attStats.org/100 * attOrgFactor);
+            // 【修正】戦闘バランス調整（膠着防止のため、防御無視ダメージを導入）
+            // 攻撃側の基本ダメージ
+            let attackPower = attStats.sa * (attStats.org / 100) * attOrgFactor;
+            // 防御側の防御力
+            let defensePower = defStats.def * (defStats.org / 100) * defBonus * defOrgFactor;
+            // 最低保証ダメージ（削りダメージ）: 攻撃力の10%は防御に関係なく通る
+            let guaranteedDmg = attackPower * 0.1;
+            // 突破ダメージ
+            let breakDmg = Math.max(0, attackPower - defensePower) * 0.4;
+            
+            // 守備側の反撃（同様のロジック）
+            let counterAttackPower = defStats.sa * (defStats.org / 100) * defOrgFactor;
+            let counterBreakthrough = attStats.brk * (attStats.org / 100) * attOrgFactor;
+            let guaranteedCounterDmg = counterAttackPower * 0.1;
+            let counterBreakDmg = Math.max(0, counterAttackPower - counterBreakthrough) * 0.4;
 
-            // Determine damage to organization and HP
-            const orgDamageToDefenders = Math.max(0, attackPower - defensePower) * 0.1; // Org damage
-            const hpDamageToDefenders = Math.max(0, attackPower - defensePower) * 0.01; // HP damage
+            // ダメージ適用
+            const totalDmgToDef = (guaranteedDmg + breakDmg) * 0.2; // 係数調整
+            const totalDmgToAtt = (guaranteedCounterDmg + counterBreakDmg) * 0.2;
 
-            const orgDamageToAttackers = Math.max(0, defStats.sa * defStats.org/100 * defOrgFactor - breakthroughPower) * 0.1;
-            const hpDamageToAttackers = Math.max(0, defStats.sa * defStats.org/100 * defOrgFactor - breakthroughPower) * 0.01;
-
-            // Apply damage to units
             defenders.forEach(u => {
-                u.org -= orgDamageToDefenders / defenders.length;
-                u.hp -= hpDamageToDefenders / defenders.length;
-                if (u.org < 0) u.org = 0;
-                if (u.hp < 0) u.hp = 0;
-                if (u.org === 0) u.state = "idle"; // Routed
-            });
-            attackers.forEach(u => {
-                u.org -= orgDamageToAttackers / attackers.length;
-                u.hp -= hpDamageToAttackers / attackers.length;
-                if (u.org < 0) u.org = 0;
-                if (u.hp < 0) u.hp = 0;
-                if (u.org === 0) u.state = "idle"; // Routed
+                u.org -= totalDmgToDef / defenders.length;
+                u.hp -= (totalDmgToDef * 0.1) / defenders.length; // HPダメージはOrgダメージの1割
+                
+                // 【修正】敗走ロジック: 組織率が極端に減ったら強制後退（全滅を防ぎ戦線を動かす）
+                if (u.org < 5 && Math.random() < 0.2) {
+                    const safeHex = u.hex.adj.find(n => n.owner === u.tag && !this.unitGrid.get(n.id)?.some(eu => eu.tag !== u.tag));
+                    if (safeHex) {
+                        u.path = [safeHex];
+                        u.state = "moving";
+                        u.org += 5; // 撤退ボーナス
+                    }
+                }
             });
 
-            // If a side is completely routed or destroyed, battle ends
-            const remainingAttackers = attackers.filter(u => u.org > 0 && u.hp > 0);
-            const remainingDefenders = defenders.filter(u => u.org > 0 && u.hp > 0);
+            attackers.forEach(u => {
+                u.org -= totalDmgToAtt / attackers.length;
+                u.hp -= (totalDmgToAtt * 0.1) / attackers.length;
+                
+                 if (u.org < 5 && Math.random() < 0.2) {
+                     // 攻撃失敗撤退
+                    const safeHex = u.hex.adj.find(n => n.owner === u.tag);
+                    if (safeHex) {
+                        u.path = [safeHex];
+                        u.state = "moving";
+                        u.org += 5;
+                    }
+                }
+            });
+
+            // 敗走判定
+            const remainingAttackers = attackers.filter(u => u.org > 0 && u.hp > 0 && u.state === "fighting");
+            const remainingDefenders = defenders.filter(u => u.org > 0 && u.hp > 0 && u.state === "fighting");
 
             if (remainingAttackers.length === 0) {
-                attackers.forEach(u => { u.state = "idle"; u.innerEl.classList.remove("fighting"); });
-                defenders.forEach(u => { u.state = "idle"; u.innerEl.classList.remove("fighting"); });
-                UI.notify(`${this.countries[attackerTag].name} の部隊が ${hex.id} で敗走！`, "warn");
+                attackers.forEach(u => { if(u.state==="fighting") u.state = "idle"; u.innerEl.classList.remove("fighting"); });
+                defenders.forEach(u => { if(u.state==="fighting") u.state = "idle"; u.innerEl.classList.remove("fighting"); });
             } else if (remainingDefenders.length === 0) {
-                attackers.forEach(u => { u.state = "idle"; u.innerEl.classList.remove("fighting"); });
-                defenders.forEach(u => { u.state = "idle"; u.innerEl.classList.remove("fighting"); });
-                UI.notify(`${this.countries[defenderTag].name} の部隊が ${hex.id} で壊滅！`, "success");
+                attackers.forEach(u => { if(u.state==="fighting") u.state = "idle"; u.innerEl.classList.remove("fighting"); });
+                defenders.forEach(u => { if(u.state==="fighting") u.state = "idle"; u.innerEl.classList.remove("fighting"); });
             } else {
-                // If battle continues, ensure units are marked as fighting
                 attackers.forEach(u => u.innerEl.classList.add("fighting"));
                 defenders.forEach(u => u.innerEl.classList.add("fighting"));
             }
         },
-        // --- END ADDED FUNCTIONS ---
         recruit: function () {
           const c = this.countries[this.player];
           const stats = this.calcStats(c.template);
@@ -3416,26 +3423,18 @@
           UI.notify("県営工場の建設を開始しました", "success");
           UI.update();
         },
+        
+        // --- ADDED: calcSupplyAll ---
         calcSupplyAll: function () {
-          // 1. Recalculate supply lines for all countries
           Object.values(this.countries).forEach((c) => {
             if (c.tag === "_SEA" || c.dead || !c.capital) return;
-            
-            // Clear previous supply map
             c.supplyMap.clear();
-
-            // Breadth-First Search (BFS) from Capital
-            // Units are in supply if they can trace a path to the capital through owned territory
             const queue = [c.capital];
             c.supplyMap.add(c.capital.id);
             const visited = new Set([c.capital.id]);
-
             while(queue.length > 0) {
                 const curr = queue.shift();
-                
-                // Check neighbors
                 curr.adj.forEach(n => {
-                    // Passable if owned by same country
                     if(n.owner === c.tag && !visited.has(n.id)) {
                         visited.add(n.id);
                         c.supplyMap.add(n.id);
@@ -3444,17 +3443,14 @@
                 });
             }
           });
-
-          // 2. Replenish supply for units in supplied hexes
           this.units.forEach(u => {
               const c = this.countries[u.tag];
-              // If unit is in a hex marked as supplied, refill supply
               if(c && c.supplyMap.has(u.hex.id)) {
                   u.supply = 100;
               }
-              // Note: Decay happens in updateUnits loop
           });
         },
+
         calcCapitals: function () {
           Object.values(this.countries).forEach((c) => {
             if (c.tag === "_SEA") return;
@@ -3654,13 +3650,6 @@
           return Object.keys(this.countries).filter(
             (k) => k !== "_SEA" && !this.countries[k].dead
           ).length;
-        },
-        justifyWar: function () {
-          if (this.selected && this.selected !== this.player) {
-            const target = this.selected;
-            UI.notify(`工作員を派遣中... (${Game.countries[target].name}へ)`);
-            setTimeout(() => this.declareWar(this.player, target), 2000);
-          }
         },
         startFocus: function (fid) {
           const c = this.countries[this.player];
@@ -4027,9 +4016,7 @@
           ) {
             let targetTmpl = DB.AITemplates.basic_inf;
 
-            // AIの工場数やXP、treeTypeに応じて師団テンプレートを選択
             if (c.treeType === "GUNMA") {
-              // グンマー帝国は機甲師団・戦車師団を優先
               if (c.fac >= 25 && c.xp >= 50 && Math.random() < 0.7) {
                 targetTmpl = DB.AITemplates.elite_tank;
               } else if (c.fac >= 15 && c.xp >= 30 && Math.random() < 0.5) {
@@ -4040,7 +4027,6 @@
                 targetTmpl = DB.AITemplates.strong_inf;
               }
             } else if (c.treeType === "HOKKAIDO") {
-              // 北海道は機械化師団を優先
               if (c.fac >= 20 && c.xp >= 40 && Math.random() < 0.6) {
                 targetTmpl = DB.AITemplates.mech_div;
               } else if (c.fac >= 10 && Math.random() < 0.4) {
@@ -4049,7 +4035,6 @@
                 targetTmpl = DB.AITemplates.strong_inf;
               }
             } else if (c.treeType === "GENERIC_WAR") {
-                // 戦争志向のAIは機動力のある師団を優先
                 if (c.fac >= 10 && Math.random() < 0.4) {
                     targetTmpl = DB.AITemplates.bike_div;
                 } else if (c.fac >= 15 && Math.random() < 0.3) {
@@ -4058,7 +4043,6 @@
                     targetTmpl = DB.AITemplates.strong_inf;
                 }
             } else if (c.fac >= 10 && Math.random() < 0.3) {
-              // その他、工場が多いAIは強力な歩兵師団
               targetTmpl = DB.AITemplates.strong_inf;
             }
 
@@ -4113,7 +4097,7 @@
                 (n) => n.owner === tag && !frontHexes.includes(n)
               );
               if (safeHex) {
-                u.path = Input.findPath(u.hex, safeHex, u.tag, 200); // AIの探索深度を浅く
+                u.path = Input.findPath(u.hex, safeHex, u.tag, 200);
                 if (u.path && u.path.length > 0) {
                     u.state = "moving";
                     actions++;
@@ -4142,18 +4126,17 @@
               });
 
               let shouldAttack = false;
+              // 攻撃ロジック緩和（膠着打破）
               if (!enemyUnit) {
-                if (exposure < 3) shouldAttack = true;
+                shouldAttack = true; // 敵がいなければ進む
               } else {
-                if (enemyUnit.org < 30 && u.org > 40) shouldAttack = true;
-                if (u.org > 60 && u.org > enemyUnit.org) shouldAttack = true;
-                if (u.org > 90) shouldAttack = true;
-                if (isStacked && u.org > 50) shouldAttack = true;
-                if (exposure >= 3 && u.org < 95 && !isStacked) shouldAttack = false;
+                if (enemyUnit.org < 40) shouldAttack = true; // 敵が弱っていれば攻撃
+                if (u.org > 70) shouldAttack = true; // 元気がよければ攻撃
+                if (isStacked && u.org > 40) shouldAttack = true; // スタックしていれば攻撃
               }
 
-              if (shouldAttack && Math.random() < 0.4) {
-                u.path = [target]; // 隣接ヘクスへの移動はパスファインディング不要
+              if (shouldAttack && Math.random() < 0.6) { // 攻撃確率アップ
+                u.path = [target];
                 u.state = "moving";
                 actions++;
                 break;
@@ -4201,7 +4184,7 @@
             }
 
             if (target) {
-              const path = Input.findPath(u.hex, target, tag, 300); // AIの探索深度を浅く
+              const path = Input.findPath(u.hex, target, tag, 300);
               if (path && path.length) {
                 u.path = path;
                 u.state = "moving";
@@ -4210,12 +4193,9 @@
             }
           }
 
-          // --- 3. 外交 (Focus主導のみ) ---
           if (enemies.length === 0 && myUnits.length > 10) {
             const neighbors = Game.getNeighbors(tag);
             
-            // Focusツリーが完了した（取得可能なFocusがない）場合のみ、手詰まり打開のために宣戦布告を行う
-            // ただし GENERIC (東北など) は除外して、ひたすら引きこもる
             const tree = DB.FocusTree[c.treeType] || DB.FocusTree.GENERIC;
             const availableFocus = tree.filter(
               (f) =>
@@ -4237,7 +4217,6 @@
               const target =
                 neighbors[Math.floor(Math.random() * neighbors.length)];
               if (!Game.isAlly(tag, target)) {
-                // UI関数を使わず直接宣言
                 setTimeout(() => Game.declareWar(tag, target), 1500);
               }
             }
