@@ -6,7 +6,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, orientation=landscape"
     />
-    <title>都道府県Wars</title>
+    <title>都道府県War: WW2拡張版 (FixAll)</title>
     <style>
       /* === 全体設定 === */
       body {
@@ -204,7 +204,7 @@
       .unit-bar {
         fill: #00e676;
       }
-      .unit-sup-bar {
+      .unit-org-bar {
         fill: #ff9100;
       }
       .unit-inner.fighting .unit-box {
@@ -1491,21 +1491,21 @@
           },
           bike_div: { bat: ["bike", "bike", "bike", "bike"], sup: ["rec"] },
           mot_div: {
-            bat: ["mot", "mot", "mot", "tank"],
+            bat: ["mot", "mot", "mot", "inf"],
             sup: ["eng", "sup_art"],
-          },
+          }, // 機動歩兵中心
           mech_div: {
-            bat: ["mech", "mech", "mech", "tank"],
+            bat: ["mech", "mech", "mech", "mot"],
             sup: ["eng", "rec"],
-          },
+          }, // 機械化歩兵中心
           tank_div: {
             bat: ["tank", "tank", "mot", "mot"],
             sup: ["eng", "sup_art"],
-          },
+          }, // 戦車中心
           elite_tank: {
             bat: ["tank", "tank", "tank", "mech", "mech"],
             sup: ["eng", "rec", "sup_art"],
-          },
+          }, // エリート戦車
         },
         FocusTree: { GENERIC: [] },
         Terrain: {
@@ -1521,801 +1521,137 @@
 
       // 1. GENERIC (コスト10倍: 700~)
       const FT_GEN = [];
-      addFocus(
-        FT_GEN,
-        "g_ind",
-        1400,
-        100,
-        "産業開発",
-        "工場+1",
-        700,
-        [],
-        (c) => (c.fac += 1)
-      );
-      addFocus(
-        FT_GEN,
-        "g_mil",
-        1700,
-        100,
-        "軍拡",
-        "XP+20",
-        700,
-        [],
-        (c) => (c.xp += 20)
-      );
-      addFocus(
-        FT_GEN,
-        "g_pol",
-        1100,
-        100,
-        "政治力強化",
-        "PP+100",
-        700,
-        [],
-        (c) => (c.pp += 100)
-      );
-      addFocus(
-        FT_GEN,
-        "g_inf",
-        1400,
-        300,
-        "インフラ整備",
-        "工場+2, 移動+5%",
-        900,
-        ["g_ind"],
-        (c) => {
-          c.fac += 2;
-          c.speedBonus = (c.speedBonus || 0) + 0.05;
-        }
-      );
-      addFocus(
-        FT_GEN,
-        "g_def",
-        1700,
-        300,
-        "防衛ドクトリン",
-        "防御+10%",
-        900,
-        ["g_mil"],
-        (c) => (c.territoryDefBonus = (c.territoryDefBonus || 0) + 0.1)
-      );
-      addFocus(
-        FT_GEN,
-        "g_res",
-        1100,
-        300,
-        "資源探査",
-        "装備+2000",
-        900,
-        ["g_pol"],
-        (c) => (c.eq += 2000)
-      );
-      addFocus(
-        FT_GEN,
-        "g_nuc",
-        1400,
-        500,
-        "原子力研究",
-        "研究完了(フレーバー)",
-        1500,
-        ["g_inf"],
-        (c) => {}
-      );
-      addFocus(
-        FT_GEN,
-        "g_mod",
-        1700,
-        500,
-        "近代化改修",
-        "XP+50, 装備+5000",
-        1200,
-        ["g_def"],
-        (c) => {
-          c.xp += 50;
-          c.eq += 5000;
-        }
-      );
-      addFocus(
-        FT_GEN,
-        "g_sta",
-        1100,
-        500,
-        "安定化工作",
-        "安定+10%",
-        900,
-        ["g_res"],
-        (c) => (c.st += 10)
-      );
-      addFocus(
-        FT_GEN,
-        "g_fin",
-        1400,
-        700,
-        "最終防衛ライン",
-        "防御+20%",
-        1500,
-        ["g_nuc", "g_mod"],
-        (c) => (c.territoryDefBonus += 0.2)
-      );
+      addFocus(FT_GEN, "g_ind", 1400, 100, "産業開発", "工場+1", 700, [], c=>c.fac+=1);
+      addFocus(FT_GEN, "g_mil", 1700, 100, "軍拡", "XP+20", 700, [], c=>c.xp+=20);
+      addFocus(FT_GEN, "g_pol", 1100, 100, "政治力強化", "PP+100", 700, [], c=>c.pp+=100);
+      addFocus(FT_GEN, "g_inf", 1400, 300, "インフラ整備", "工場+2, 移動+5%", 900, ["g_ind"], c=>{c.fac+=2; c.speedBonus=(c.speedBonus||0)+0.05;});
+      addFocus(FT_GEN, "g_def", 1700, 300, "防衛ドクトリン", "防御+10%", 900, ["g_mil"], c=>c.territoryDefBonus=(c.territoryDefBonus||0)+0.1);
+      addFocus(FT_GEN, "g_res", 1100, 300, "資源探査", "装備+2000", 900, ["g_pol"], c=>c.eq+=2000);
+      addFocus(FT_GEN, "g_nuc", 1400, 500, "原子力研究", "研究完了(フレーバー)", 1500, ["g_inf"], c=>{});
+      addFocus(FT_GEN, "g_mod", 1700, 500, "近代化改修", "XP+50, 装備+5000", 1200, ["g_def"], c=>{c.xp+=50;c.eq+=5000;});
+      addFocus(FT_GEN, "g_sta", 1100, 500, "安定化工作", "安定+10%", 900, ["g_res"], c=>c.st+=10);
+      addFocus(FT_GEN, "g_fin", 1400, 700, "最終防衛ライン", "防御+20%", 1500, ["g_nuc","g_mod"], c=>c.territoryDefBonus+=0.2);
       DB.FocusTree.GENERIC = FT_GEN;
 
       // 2. GENERIC_WAR (西日本/九州)
       const FT_WAR = [];
-      addFocus(
-        FT_WAR,
-        "w_prep",
-        1500,
-        100,
-        "開戦準備",
-        "工場+2, PP+50",
-        700,
-        [],
-        (c) => {
-          c.fac += 2;
-          c.pp += 50;
-        }
-      );
-      addFocus(
-        FT_WAR,
-        "w_mob",
-        1500,
-        250,
-        "総動員",
-        "人的+20000",
-        1000,
-        ["w_prep"],
-        (c) => (c.mp += 20000)
-      );
-      addFocus(
-        FT_WAR,
-        "w_uni",
-        1500,
-        400,
-        "地域統一",
-        "隣国へ宣戦",
-        1400,
-        ["w_mob"],
-        (c) => {
-          const neighbors = Game.getNeighbors(c.tag);
-          const target = neighbors.find((n) => !Game.isAlly(c.tag, n));
-          if (target) {
-            UI.notify(
-              `${c.name} が地域統一のため ${Game.countries[target].name} に宣戦布告！`,
-              "war"
-            );
+      addFocus(FT_WAR, "w_prep", 1500, 100, "開戦準備", "工場+2, PP+50", 700, [], c=>{c.fac+=2;c.pp+=50;});
+      addFocus(FT_WAR, "w_mob", 1500, 250, "総動員", "人的+20000", 1000, ["w_prep"], c=>c.mp+=20000);
+      addFocus(FT_WAR, "w_uni", 1500, 400, "地域統一", "隣国へ宣戦", 1400, ["w_mob"], c=>{
+        const neighbors = Game.getNeighbors(c.tag);
+        const target = neighbors.find(n => !Game.isAlly(c.tag, n));
+        if (target) {
+            UI.notify(`${c.name} が地域統一のため ${Game.countries[target].name} に宣戦布告！`, "war");
             Game.declareWar(c.tag, target);
-          }
         }
-      );
-      addFocus(
-        FT_WAR,
-        "w_exp",
-        1500,
-        550,
-        "領土拡大",
-        "別の隣国へ宣戦",
-        1400,
-        ["w_uni"],
-        (c) => {
-          const neighbors = Game.getNeighbors(c.tag);
-          const target = neighbors.find(
-            (n) => !Game.isAlly(c.tag, n) && !Game.isWar(c.tag, n)
-          );
-          if (target) Game.declareWar(c.tag, target);
-        }
-      );
-      addFocus(
-        FT_WAR,
-        "w_ind",
-        1300,
-        250,
-        "軍需産業",
-        "工場+3",
-        1000,
-        ["w_prep"],
-        (c) => (c.fac += 3)
-      );
-      addFocus(
-        FT_WAR,
-        "w_doc",
-        1700,
-        250,
-        "攻撃ドクトリン",
-        "突破+10%",
-        1000,
-        ["w_prep"],
-        (c) => {}
-      );
-      addFocus(
-        FT_WAR,
-        "w_hvy",
-        1300,
-        400,
-        "重装備化",
-        "装備+10000",
-        1200,
-        ["w_ind"],
-        (c) => (c.eq += 10000)
-      );
-      addFocus(
-        FT_WAR,
-        "w_eli",
-        1700,
-        400,
-        "精鋭部隊",
-        "XP+100",
-        1200,
-        ["w_doc"],
-        (c) => (c.xp += 100)
-      );
-      addFocus(
-        FT_WAR,
-        "w_fin",
-        1500,
-        700,
-        "覇権確立",
-        "安定+20%, 工場+5",
-        2000,
-        ["w_exp"],
-        (c) => {
-          c.st += 20;
-          c.fac += 5;
-        }
-      );
+      });
+      addFocus(FT_WAR, "w_exp", 1500, 550, "領土拡大", "別の隣国へ宣戦", 1400, ["w_uni"], c=>{
+        const neighbors = Game.getNeighbors(c.tag);
+        const target = neighbors.find(n => !Game.isAlly(c.tag, n) && !Game.isWar(c.tag, n));
+        if (target) Game.declareWar(c.tag, target);
+      });
+      addFocus(FT_WAR, "w_ind", 1300, 250, "軍需産業", "工場+3", 1000, ["w_prep"], c=>c.fac+=3);
+      addFocus(FT_WAR, "w_doc", 1700, 250, "攻撃ドクトリン", "突破+10%", 1000, ["w_prep"], c=>{}); 
+      addFocus(FT_WAR, "w_hvy", 1300, 400, "重装備化", "装備+10000", 1200, ["w_ind"], c=>c.eq+=10000);
+      addFocus(FT_WAR, "w_eli", 1700, 400, "精鋭部隊", "XP+100", 1200, ["w_doc"], c=>c.xp+=100);
+      addFocus(FT_WAR, "w_fin", 1500, 700, "覇権確立", "安定+20%, 工場+5", 2000, ["w_exp"], c=>{c.st+=20;c.fac+=5;});
       DB.FocusTree.GENERIC_WAR = FT_WAR;
 
-      // 3. GUNMA (Germany)
-      const FT_GUN = [];
-      addFocus(
-        FT_GUN,
-        "g_emp",
-        1400,
-        100,
-        "帝国の復活",
-        "PP+150, 安定+10",
-        700,
-        [],
-        (c) => {
-          c.pp += 150;
-          c.st += 10;
-        }
-      );
-      addFocus(
-        FT_GUN,
-        "g_ind",
-        1200,
-        250,
-        "4ヶ年計画",
-        "工場+5",
-        1400,
-        ["g_emp"],
-        (c) => (c.fac += 5)
-      );
-      addFocus(
-        FT_GUN,
-        "g_army",
-        1600,
-        250,
-        "帝国陸軍再建",
-        "XP+100, 装備+5000",
-        1400,
-        ["g_emp"],
-        (c) => {
-          c.xp += 100;
-          c.eq += 5000;
-        }
-      );
 
-      addFocus(
-        FT_GUN,
-        "g_toch",
-        1400,
-        400,
-        "北関東の運命",
-        "栃木へ宣戦布告",
-        700,
-        ["g_emp"],
-        (c) => {
-          UI.notify("グンマー帝国が栃木の領有を主張し、侵攻開始！", "war");
-          let tTag = null;
-          Object.keys(Game.countries).forEach((k) => {
-            if (Game.countries[k].name.includes("栃木")) tTag = k;
-          });
-          if (tTag) Game.declareWar(c.tag, tTag);
-        }
-      );
-      addFocus(
-        FT_GUN,
-        "g_ibar",
-        1400,
-        550,
-        "東方生存圏",
-        "茨城へ宣戦布告",
-        700,
-        ["g_toch"],
-        (c) => {
-          UI.notify("グンマー帝国が茨城へ最後通牒！攻撃開始！", "war");
-          let tTag = null;
-          Object.keys(Game.countries).forEach((k) => {
-            if (Game.countries[k].name.includes("茨城")) tTag = k;
-          });
-          if (tTag) Game.declareWar(c.tag, tTag);
-        }
-      );
-      addFocus(
-        FT_GUN,
-        "g_sait",
-        1400,
-        700,
-        "さいたま回廊",
-        "埼玉へ宣戦布告",
-        700,
-        ["g_ibar"],
-        (c) => {
-          UI.notify("グンマー帝国、埼玉へ宣戦布告！", "war");
-          let tTag = null;
-          Object.keys(Game.countries).forEach((k) => {
-            if (Game.countries[k].name.includes("埼玉")) tTag = k;
-          });
-          if (tTag) Game.declareWar(c.tag, tTag);
-        }
-      );
-      addFocus(
-        FT_GUN,
-        "g_blitz",
-        1400,
-        850,
-        "電撃戦",
-        "移動速度+20%",
-        1400,
-        ["g_sait"],
-        (c) => {
-          UI.notify("電撃戦ドクトリン採用！");
-          c.speedBonus = 0.2;
-        }
-      );
+     // 3. GUNMA (Germany) - 修正版
+      const FT_GUN = [];
+      addFocus(FT_GUN, "g_emp", 1400, 100, "帝国の復活", "PP+200, 安定+20%", 700, [], c=>{c.pp+=200;c.st+=20;});
+      addFocus(FT_GUN, "g_ind", 1200, 250, "ニューイヤー駅伝強化", "工場+10, 移動+10%", 1000, ["g_emp"], c=>{c.fac+=10; c.speedBonus=0.1;});
+      addFocus(FT_GUN, "g_army", 1600, 250, "赤城おろし", "XP+200, 装備+10000", 1000, ["g_emp"], c=>{c.xp+=200;c.eq+=10000;});
+      
+      // 戦争頻度調整: コストを700→1500~2000以上に増加
+      addFocus(FT_GUN, "g_toch", 1400, 400, "北関東の運命", "栃木へ宣戦布告", 1500, ["g_emp"], c=>{
+        UI.notify("グンマー帝国が栃木の領有を主張し、侵攻開始！", "war");
+        let tTag = null;
+        Object.keys(Game.countries).forEach(k => { if(Game.countries[k].name.includes("栃木")) tTag = k; });
+        if(tTag) Game.declareWar(c.tag, tTag);
+      });
+      addFocus(FT_GUN, "g_ibar", 1400, 550, "関東生存圏", "茨城へ宣戦布告", 2000, ["g_toch"], c=>{
+         UI.notify("グンマー帝国が茨城へ最後通牒！攻撃開始！", "war");
+         let tTag = null;
+         Object.keys(Game.countries).forEach(k => { if(Game.countries[k].name.includes("茨城")) tTag = k; });
+         if(tTag) Game.declareWar(c.tag, tTag);
+      });
+      addFocus(FT_GUN, "g_sait", 1400, 700, "さいたま回廊", "埼玉へ宣戦布告", 2500, ["g_ibar"], c=>{
+         UI.notify("グンマー帝国、埼玉へ宣戦布告！", "war");
+         let tTag = null;
+         Object.keys(Game.countries).forEach(k => { if(Game.countries[k].name.includes("埼玉")) tTag = k; });
+         if(tTag) Game.declareWar(c.tag, tTag);
+      });
+      addFocus(FT_GUN, "g_blitz", 1400, 850, "からっ風ドクトリン", "移動速度+30%, 突破+20%", 1400, ["g_sait"], c=>{
+         UI.notify("からっ風ドクトリン採用！");
+         c.speedBonus = (c.speedBonus||0) + 0.3; 
+      });
       // 追加
-      addFocus(
-        FT_GUN,
-        "g_niig",
-        1200,
-        850,
-        "日本海への出口",
-        "新潟へ宣戦",
-        1000,
-        ["g_ind"],
-        (c) => {
-          let tTag = null;
-          Object.keys(Game.countries).forEach((k) => {
-            if (Game.countries[k].name.includes("新潟")) tTag = k;
-          });
-          if (tTag) Game.declareWar(c.tag, tTag);
-        }
-      );
-      addFocus(
-        FT_GUN,
-        "g_wun",
-        1600,
-        850,
-        "新兵器開発",
-        "工場+3, XP+50",
-        1500,
-        ["g_army"],
-        (c) => {
-          c.fac += 3;
-          c.xp += 50;
-        }
-      );
-      addFocus(
-        FT_GUN,
-        "g_ss",
-        1400,
-        1000,
-        "親衛隊編成",
-        "人的+20000",
-        1200,
-        ["g_blitz"],
-        (c) => (c.mp += 20000)
-      );
-      addFocus(
-        FT_GUN,
-        "g_fort",
-        1200,
-        1000,
-        "絶対防衛線",
-        "防御+20%",
-        1200,
-        ["g_niig"],
-        (c) => (c.territoryDefBonus += 0.2)
-      );
-      addFocus(
-        FT_GUN,
-        "g_tot",
-        1600,
-        1000,
-        "総力戦",
-        "工場+5, 人的+50000",
-        2000,
-        ["g_wun"],
-        (c) => {
-          c.fac += 5;
-          c.mp += 50000;
-        }
-      );
-      addFocus(
-        FT_GUN,
-        "g_end",
-        1400,
-        1200,
-        "新世界秩序",
-        "PP+500",
-        3000,
-        ["g_ss"],
-        (c) => (c.pp += 500)
-      );
+      addFocus(FT_GUN, "g_niig", 1200, 850, "日本海への出口", "新潟へ宣戦", 3000, ["g_ind"], c=>{
+         let tTag = null;
+         Object.keys(Game.countries).forEach(k => { if(Game.countries[k].name.includes("新潟")) tTag = k; });
+         if(tTag) Game.declareWar(c.tag, tTag);
+      });
+      addFocus(FT_GUN, "g_wun", 1600, 850, "秘密兵器", "工場+5, XP+100", 1500, ["g_army"], c=>{c.fac+=5;c.xp+=100;});
+      addFocus(FT_GUN, "g_ss", 1400, 1000, "親衛隊編成", "人的+100000", 1200, ["g_blitz"], c=>c.mp+=100000);
+      addFocus(FT_GUN, "g_fort", 1200, 1000, "絶対防衛線", "防御+30%", 1200, ["g_niig"], c=>c.territoryDefBonus+=0.3);
+      addFocus(FT_GUN, "g_tot", 1600, 1000, "総力戦", "工場+10, 人的+100000", 2000, ["g_wun"], c=>{c.fac+=10;c.mp+=100000;});
+      addFocus(FT_GUN, "g_end", 1400, 1200, "新日本秩序", "PP+1000", 3000, ["g_ss"], c=>c.pp+=1000);
       DB.FocusTree.GUNMA = FT_GUN;
 
       // 4. TOKYO (UK)
       const FT_TOK = [];
-      addFocus(
-        FT_TOK,
-        "t_def",
-        1500,
-        100,
-        "首都防衛",
-        "安定+20%",
-        700,
-        [],
-        (c) => (c.st += 20)
-      );
-      addFocus(
-        FT_TOK,
-        "t_all",
-        1300,
-        250,
-        "関東連合の結束",
-        "同盟国との関係強化",
-        1000,
-        ["t_def"],
-        (c) => {
-          UI.notify("東京が関東諸国へ支援を約束", "success");
-          c.pp += 100;
-        }
-      );
-      addFocus(
-        FT_TOK,
-        "t_fort",
-        1700,
-        250,
-        "要塞化",
-        "防御+10%",
-        1000,
-        ["t_def"],
-        (c) => (c.territoryDefBonus = 0.1)
-      );
-      addFocus(
-        FT_TOK,
-        "t_air",
-        1500,
-        400,
-        "防空網整備",
-        "工場+3",
-        1400,
-        ["t_def"],
-        (c) => (c.fac += 3)
-      );
-      addFocus(
-        FT_TOK,
-        "t_mob",
-        1500,
-        550,
-        "本土決戦準備",
-        "人的+50000",
-        1400,
-        ["t_air"],
-        (c) => (c.mp += 50000)
-      );
+      addFocus(FT_TOK, "t_def", 1500, 100, "首都防衛", "安定+20%", 700, [], c=>c.st+=20);
+      addFocus(FT_TOK, "t_all", 1300, 250, "関東連合の結束", "同盟国との関係強化", 1000, ["t_def"], c=>{
+         UI.notify("東京が関東諸国へ支援を約束", "success");
+         c.pp+=100;
+      });
+      addFocus(FT_TOK, "t_fort", 1700, 250, "要塞化", "防御+10%", 1000, ["t_def"], c=>c.territoryDefBonus=0.1);
+      addFocus(FT_TOK, "t_air", 1500, 400, "防空網整備", "工場+3", 1400, ["t_def"], c=>c.fac+=3);
+      addFocus(FT_TOK, "t_mob", 1500, 550, "本土決戦準備", "人的+50000", 1400, ["t_air"], c=>c.mp+=50000);
       // 追加
-      addFocus(
-        FT_TOK,
-        "t_nav",
-        1300,
-        550,
-        "海軍増強",
-        "工場+5",
-        1500,
-        ["t_all"],
-        (c) => (c.fac += 5)
-      );
-      addFocus(
-        FT_TOK,
-        "t_rad",
-        1700,
-        550,
-        "レーダー網",
-        "防御+10%",
-        1200,
-        ["t_fort"],
-        (c) => (c.territoryDefBonus += 0.1)
-      );
-      addFocus(
-        FT_TOK,
-        "t_com",
-        1300,
-        700,
-        "コモンウェルス統合",
-        "人的+30000, PP+100",
-        1500,
-        ["t_nav"],
-        (c) => {
-          c.mp += 30000;
-          c.pp += 100;
-        }
-      );
-      addFocus(
-        FT_TOK,
-        "t_bom",
-        1700,
-        700,
-        "戦略爆撃",
-        "工場建設速度+20%",
-        1500,
-        ["t_rad"],
-        (c) => (c.factoryBuildSpeedBonus = 0.2)
-      );
-      addFocus(
-        FT_TOK,
-        "t_down",
-        1500,
-        850,
-        "ダウンフォール作戦",
-        "攻撃+10%(Flavor)",
-        2000,
-        ["t_mob"],
-        (c) => {}
-      );
+      addFocus(FT_TOK, "t_nav", 1300, 550, "海軍増強", "工場+5", 1500, ["t_all"], c=>c.fac+=5);
+      addFocus(FT_TOK, "t_rad", 1700, 550, "レーダー網", "防御+10%", 1200, ["t_fort"], c=>c.territoryDefBonus+=0.1);
+      addFocus(FT_TOK, "t_com", 1300, 700, "諸島統合", "人的+30000, PP+100", 1500, ["t_nav"], c=>{c.mp+=30000;c.pp+=100;});
+      addFocus(FT_TOK, "t_bom", 1700, 700, "戦略爆撃", "工場建設速度+20%", 1500, ["t_rad"], c=>c.factoryBuildSpeedBonus=0.2);
+      addFocus(FT_TOK, "t_down", 1500, 850, "自由存続作戦", "攻撃+10%(Flavor)", 2000, ["t_mob"], c=>{});
       DB.FocusTree.TOKYO = FT_TOK;
 
       // 5. SAITAMA (France)
       const FT_SAI = [];
-      addFocus(
-        FT_SAI,
-        "s_pol",
-        1500,
-        100,
-        "県政の混乱",
-        "PP-50, 安定-10%",
-        700,
-        [],
-        (c) => {
-          c.pp -= 50;
-          c.st -= 10;
-        }
-      );
-      addFocus(
-        FT_SAI,
-        "s_mag",
-        1500,
-        250,
-        "ダサイタマ・ライン",
-        "防御+20%, 工場+2",
-        1400,
-        ["s_pol"],
-        (c) => {
-          c.territoryDefBonus = 0.2;
-          c.fac += 2;
-        }
-      );
-      addFocus(
-        FT_SAI,
-        "s_ref",
-        1300,
-        400,
-        "政府改革",
-        "PP+200, 安定+20%",
-        1400,
-        ["s_pol"],
-        (c) => {
-          c.pp += 200;
-          c.st += 20;
-        }
-      );
-      addFocus(
-        FT_SAI,
-        "s_ext",
-        1700,
-        400,
-        "現状維持",
-        "人的+10000",
-        700,
-        ["s_pol"],
-        (c) => (c.mp += 10000)
-      );
+      addFocus(FT_SAI, "s_pol", 1500, 100, "県政の混乱", "PP-50, 安定-10%", 700, [], c=>{c.pp-=50;c.st-=10;});
+      addFocus(FT_SAI, "s_mag", 1500, 250, "サイタマ・ライン", "防御+20%, 工場+2", 1400, ["s_pol"], c=>{c.territoryDefBonus=0.2;c.fac+=2;});
+      addFocus(FT_SAI, "s_ref", 1300, 400, "政府改革", "PP+200, 安定+20%", 1400, ["s_pol"], c=>{c.pp+=200;c.st+=20;});
+      addFocus(FT_SAI, "s_ext", 1700, 400, "現状維持", "人的+10000", 700, ["s_pol"], c=>c.mp+=10000);
       // 追加
-      addFocus(
-        FT_SAI,
-        "s_ext2",
-        1500,
-        550,
-        "マジノ線延長",
-        "防御+10%",
-        1200,
-        ["s_mag"],
-        (c) => (c.territoryDefBonus += 0.1)
-      );
-      addFocus(
-        FT_SAI,
-        "s_com",
-        1300,
-        550,
-        "共産化ルート",
-        "人的+50000",
-        1500,
-        ["s_ref"],
-        (c) => (c.mp += 50000)
-      );
-      addFocus(
-        FT_SAI,
-        "s_ent",
-        1700,
-        550,
-        "小協商",
-        "PP+100",
-        1000,
-        ["s_ext"],
-        (c) => (c.pp += 100)
-      );
-      addFocus(
-        FT_SAI,
-        "s_alp",
-        1500,
-        700,
-        "アルプス要塞",
-        "工場+3",
-        1500,
-        ["s_ext2"],
-        (c) => (c.fac += 3)
-      );
-      addFocus(
-        FT_SAI,
-        "s_eva",
-        1500,
-        850,
-        "産業疎開",
-        "工場+5",
-        2000,
-        ["s_alp"],
-        (c) => (c.fac += 5)
-      );
+      addFocus(FT_SAI, "s_ext2", 1500, 550, "サイタマライン延長", "防御+10%", 1200, ["s_mag"], c=>c.territoryDefBonus+=0.1);
+      addFocus(FT_SAI, "s_com", 1300, 550, "共産化ルート", "人的+50000", 1500, ["s_ref"], c=>c.mp+=50000);
+      addFocus(FT_SAI, "s_ent", 1700, 550, "小協商", "PP+100", 1000, ["s_ext"], c=>c.pp+=100);
+      addFocus(FT_SAI, "s_alp", 1500, 700, "アルプス要塞", "工場+3", 1500, ["s_ext2"], c=>c.fac+=3);
+      addFocus(FT_SAI, "s_eva", 1500, 850, "産業疎開", "工場+5", 2000, ["s_alp"], c=>c.fac+=5);
       DB.FocusTree.SAITAMA = FT_SAI;
 
       // 6. HOKKAIDO (USSR)
       const FT_HOK = [];
-      addFocus(
-        FT_HOK,
-        "h_rev",
-        1500,
-        100,
-        "北海革命",
-        "安定+50%",
-        700,
-        [],
-        (c) => (c.st = 100)
-      );
-      addFocus(
-        FT_HOK,
-        "h_ind",
-        1300,
-        250,
-        "5カ年計画",
-        "工場+10",
-        2000,
-        ["h_rev"],
-        (c) => (c.fac += 10)
-      );
-      addFocus(
-        FT_HOK,
-        "h_purge",
-        1700,
-        250,
-        "大粛清",
-        "将校追放: XP-50, PP+200",
-        1400,
-        ["h_rev"],
-        (c) => {
-          c.xp -= 50;
-          c.pp += 200;
-        }
-      );
-      addFocus(
-        FT_HOK,
-        "h_mass",
-        1500,
-        400,
-        "人海戦術",
-        "人的+200000",
-        1400,
-        ["h_ind", "h_purge"],
-        (c) => (c.mp += 200000)
-      );
-      addFocus(
-        FT_HOK,
-        "h_tank",
-        1500,
-        550,
-        "T-34量産",
-        "工場+5, 装備+10000",
-        1400,
-        ["h_mass"],
-        (c) => {
-          c.fac += 5;
-          c.eq += 10000;
-        }
-      );
+      addFocus(FT_HOK, "h_rev", 1500, 100, "北海革命", "安定+50%", 700, [], c=>c.st=100);
+      addFocus(FT_HOK, "h_ind", 1300, 250, "5カ年計画", "工場+10", 2000, ["h_rev"], c=>c.fac+=10);
+      addFocus(FT_HOK, "h_purge", 1700, 250, "大粛清", "将校追放: XP-50, PP+200", 1400, ["h_rev"], c=>{c.xp-=50;c.pp+=200;});
+      addFocus(FT_HOK, "h_mass", 1500, 400, "人海戦術", "人的+200000", 1400, ["h_ind","h_purge"], c=>c.mp+=200000);
+      addFocus(FT_HOK, "h_tank", 1500, 550, "T-34量産", "工場+5, 装備+10000", 1400, ["h_mass"], c=>{c.fac+=5;c.eq+=10000;});
       // 追加
-      addFocus(
-        FT_HOK,
-        "h_south",
-        1500,
-        700,
-        "南下政策",
-        "東北(青森)へ宣戦布告",
-        1000,
-        ["h_mass"],
-        (c) => {
-          UI.notify("北海ソビエトが南下を開始！東北へ侵攻！", "war");
-          let tTag = null;
-          Object.keys(Game.countries).forEach((k) => {
-            if (Game.countries[k].name.includes("青森")) tTag = k;
-          });
-          if (tTag) Game.declareWar(c.tag, tTag);
-        }
-      );
-      addFocus(
-        FT_HOK,
-        "h_sib",
-        1300,
-        700,
-        "シベリア開発",
-        "工場+5",
-        1500,
-        ["h_ind"],
-        (c) => (c.fac += 5)
-      );
-      addFocus(
-        FT_HOK,
-        "h_kgb",
-        1700,
-        700,
-        "KGB創設",
-        "安定+10%",
-        1200,
-        ["h_purge"],
-        (c) => (c.st += 10)
-      );
-      addFocus(
-        FT_HOK,
-        "h_cold",
-        1500,
-        850,
-        "冷戦準備",
-        "工場+5",
-        2000,
-        ["h_south"],
-        (c) => (c.fac += 5)
-      );
-      addFocus(
-        FT_HOK,
-        "h_nuc",
-        1500,
-        1000,
-        "核実験",
-        "PP+500",
-        3000,
-        ["h_cold"],
-        (c) => (c.pp += 500)
-      );
+      addFocus(FT_HOK, "h_south", 1500, 700, "南下政策", "東北(青森)へ宣戦布告", 1000, ["h_mass"], c=>{
+         UI.notify("北海ソビエトが南下を開始！東北へ侵攻！", "war");
+         let tTag = null;
+         Object.keys(Game.countries).forEach(k => { if(Game.countries[k].name.includes("青森")) tTag = k; });
+         if(tTag) Game.declareWar(c.tag, tTag);
+      });
+      addFocus(FT_HOK, "h_sib", 1300, 700, "北方開発", "工場+5", 1500, ["h_ind"], c=>c.fac+=5);
+      addFocus(FT_HOK, "h_kgb", 1700, 700, "KGB創設", "安定+10%", 1200, ["h_purge"], c=>c.st+=10);
+      addFocus(FT_HOK, "h_cold", 1500, 850, "冷戦準備", "工場+5", 2000, ["h_south"], c=>c.fac+=5);
+      addFocus(FT_HOK, "h_nuc", 1500, 1000, "核実験", "PP+500", 3000, ["h_cold"], c=>c.pp+=500);
       DB.FocusTree.HOKKAIDO = FT_HOK;
+
 
       const CapitalCoords = {
         P1: { lat: 43.064359, lon: 141.347449 },
@@ -2381,18 +1717,42 @@
           if (!this.lastUpdateTime || now - this.lastUpdateTime > 500) {
             this.lastUpdateTime = now;
 
-            $("res-pp").innerText = ~~p.pp;
-            $("res-st").innerText = p.st + "%";
-            $("res-ws").innerText = p.ws + "%";
-            $("res-man").innerText = nFmt(p.mp);
-            $("res-eq").innerText = nFmt(p.eq);
-            $("res-xp").innerText = ~~p.xp;
-            $("res-fac").innerText = p.fac;
-
+            // 値が変更された場合のみDOMを更新
+            if (this._lastValues.pp !== ~~p.pp) {
+              $("res-pp").innerText = ~~p.pp;
+              this._lastValues.pp = ~~p.pp;
+            }
+            if (this._lastValues.st !== p.st + "%") {
+              $("res-st").innerText = p.st + "%";
+              this._lastValues.st = p.st + "%";
+            }
+            if (this._lastValues.ws !== p.ws + "%") {
+              $("res-ws").innerText = p.ws + "%";
+              this._lastValues.ws = p.ws + "%";
+            }
+            if (this._lastValues.mp !== nFmt(p.mp)) {
+              $("res-man").innerText = nFmt(p.mp);
+              this._lastValues.mp = nFmt(p.mp);
+            }
+            if (this._lastValues.eq !== nFmt(p.eq)) {
+              $("res-eq").innerText = nFmt(p.eq);
+              this._lastValues.eq = nFmt(p.eq);
+            }
+            if (this._lastValues.xp !== ~~p.xp) {
+              $("res-xp").innerText = ~~p.xp;
+              this._lastValues.xp = ~~p.xp;
+            }
+            if (this._lastValues.fac !== p.fac) {
+              $("res-fac").innerText = p.fac;
+              this._lastValues.fac = p.fac;
+            }
+            
             const dObj = new Date(2025, 3, 1 + Game.day);
-            $("game-date").innerText = `${dObj.getFullYear()}/${
-              dObj.getMonth() + 1
-            }/${dObj.getDate()}`;
+            const dateStr = `${dObj.getFullYear()}/${dObj.getMonth() + 1}/${dObj.getDate()}`;
+            if (this._lastValues.date !== dateStr) {
+              $("game-date").innerText = dateStr;
+              this._lastValues.date = dateStr;
+            }
           }
 
           let armyCount = 0;
@@ -2400,16 +1760,19 @@
             if (u.tag === Game.player) armyCount++;
           });
 
-          if (this._lastArmyCount !== armyCount) {
+          if (this._lastValues.armyCount !== armyCount) {
             $("army-count").innerText = armyCount;
+            this._lastValues.armyCount = armyCount;
+          }
+          if (this._lastValues.selCount !== Input.selUnits.length) {
             $("sel-count").innerText = Input.selUnits.length;
-            this._lastArmyCount = armyCount;
+            this._lastValues.selCount = Input.selUnits.length;
           }
 
           const tension = Game.tension + "%";
-          if (this._lastTension !== tension) {
+          if (this._lastValues.tension !== tension) {
             $("val-wt").innerText = tension;
-            this._lastTension = tension;
+            this._lastValues.tension = tension;
           }
 
           let focusText = "";
@@ -2428,14 +1791,14 @@
             focusText = "県政方針を選択";
           }
 
-          if (this._lastFocusText !== focusText) {
+          if (this._lastValues.focusText !== focusText) {
             $("sb-focus-curr").innerText = focusText;
-            this._lastFocusText = focusText;
+            this._lastValues.focusText = focusText;
           }
 
-          if (this._lastFocusBarWidth !== focusBarWidth) {
+          if (this._lastValues.focusBarWidth !== focusBarWidth) {
             $("sb-focus-bar").style.width = focusBarWidth;
-            this._lastFocusBarWidth = focusBarWidth;
+            this._lastValues.focusBarWidth = focusBarWidth;
           }
         },
         updateSidebar: function () {
@@ -2631,6 +1994,11 @@
             d.style.background = "rgba(60,60,10,.95)";
           }
           $("news-feed").prepend(d);
+          // 古いニュースを自動削除してDOM要素を減らす
+          const newsItems = $("news-feed").children;
+          if (newsItems.length > 5) { // 最大5件に制限
+            newsItems[newsItems.length - 1].remove();
+          }
           setTimeout(() => d.remove(), 6000);
         },
         showStartScreen: function () {
@@ -2963,7 +2331,10 @@
                 if (t.classList.contains("hex")) {
                   const h = MapSys.hexes[t.dataset.id];
                   if (h)
-                    this.onHexClick({ button: 0, preventDefault: () => {} }, h);
+                    this.onHexClick(
+                      { button: 0, preventDefault: () => {} },
+                      h
+                    );
                 } else if (t.closest(".unit-grp")) {
                   const uEl = t.closest(".unit-grp");
                   const u = Game.units.find((x) => x.el === uEl);
@@ -3118,7 +2489,7 @@
             this.hlUnits();
           } else if (e.button === 2 && this.selUnits.length) {
             const uTag = this.selUnits[0].tag;
-            const path = this.findPath(this.selUnits[0].hex, hex, uTag, 3000);
+            const path = this.findPath(this.selUnits[0].hex, hex, uTag, 5000); // プレイヤーは探索深度を深く
             if (path && path.length > 0) {
               this.selUnits.forEach((u) => {
                 u.path = [...path];
@@ -3150,11 +2521,10 @@
           }
         },
         findPath: function (start, end, unitTag, maxSearch = 300) {
-          // デフォルト探索数を200->00に増加
           const cacheKey = `${start.id}-${end.id}-${unitTag}`;
+          // キャッシュの有効期限を短くして、戦況の変化に敏感にする (2日)
           if (this.pathCache.has(cacheKey)) {
             const cached = this.pathCache.get(cacheKey);
-            // キャッシュ有効期限を短くして、戦況の変化に敏感にする
             if (Game.day - cached.day < 2) return [...cached.path];
           }
 
@@ -3173,7 +2543,7 @@
           let steps = 0;
 
           while (openList.length > 0) {
-            if (steps++ > maxSearch) break;
+            if (steps++ > maxSearch) break; // 探索深度制限
 
             openList.sort((a, b) => {
               const fa = fScore.get(a.id);
@@ -3190,7 +2560,12 @@
                 path.unshift(temp);
                 temp = cameFrom.get(temp.id);
               }
-              if (this.pathCache.size > 2000) this.pathCache.clear();
+              // キャッシュのサイズ制限
+              if (this.pathCache.size > 2000) {
+                // 古いキャッシュを削除
+                const oldestKey = this.pathCache.keys().next().value;
+                this.pathCache.delete(oldestKey);
+              }
               this.pathCache.set(cacheKey, { path: path, day: Game.day });
               return path;
             }
@@ -3206,7 +2581,7 @@
               const isWarTarget = Game.isWar(unitTag, neighbor.owner);
               const isAlly = Game.isAlly(unitTag, neighbor.owner);
 
-              // 修正: 敵地(isWarTarget)も通過可能としてコスト計算に含める
+              // 敵地(isWarTarget)も通過可能としてコスト計算に含める
               if (!isSea && !isMyLand && !isWarTarget && !isAlly) {
                 continue;
               }
@@ -3244,15 +2619,15 @@
         uiLayer: null,
         gameSvg: null,
         cachedMapBounds: null,
-
+        
         update: function () {
           $(
             "game-svg"
           ).style.transform = `translate3d(${this.x}px, ${this.y}px, 0) scale(${this.s})`;
         },
-
-        cacheBounds: function () {
-          this.cachedMapBounds = Input.mapWrapEl.getBoundingClientRect();
+        
+        cacheBounds: function() {
+            this.cachedMapBounds = Input.mapWrapEl.getBoundingClientRect();
         },
 
         addUnit: function (u) {
@@ -3276,6 +2651,8 @@
           u.orgBar = inner.querySelector(".unit-org-bar");
           u.lastRenderX = u.x;
           u.lastRenderY = u.y;
+          u.lastHpW = 0; // 初回描画用に初期化
+          u.lastOrgW = 0; // 初回描画用に初期化
 
           const noSupply = document.createElementNS(
             "http://www.w3.org/2000/svg",
@@ -3292,11 +2669,14 @@
         updateUnit: function (u) {
           // 軽量化: キャッシュされたBoundsを使用
           const mapWrapRect = this.cachedMapBounds;
-          if (!mapWrapRect) return; // 初回用
+          if(!mapWrapRect) return; // 初回用
 
           const screenX = u.x * this.s + this.x;
           const screenY = u.y * this.s + this.y;
-          const padding = 50;
+          const padding = 50; // 画面外カリングの余裕
+
+          // ユニット要素がまだ存在しない場合はスキップ
+          if (!u.el) return;
 
           // 画面外カリング (DOM更新をスキップ)
           if (
@@ -3312,16 +2692,15 @@
 
           // 安全装置: 座標が不正ならヘクス中心に強制リセット
           if (!isFinite(u.x) || !isFinite(u.y)) {
-            u.x = u.hex.x;
-            u.y = u.hex.y;
+             u.x = u.hex.x;
+             u.y = u.hex.y;
           }
 
+          // ユニットの位置更新は、実際の移動があった場合のみ
           if (
-            Math.abs(u.x - u.lastRenderX) < 0.1 &&
-            Math.abs(u.y - u.lastRenderY) < 0.1
+            Math.abs(u.x - u.lastRenderX) > 0.5 || // 閾値を設けて微細な動きでは更新しない
+            Math.abs(u.y - u.lastRenderY) > 0.5
           ) {
-            // ステータスバーなどの更新チェックのみ行う
-          } else {
             u.el.setAttribute(
               "transform",
               `translate(${u.x.toFixed(1)},${u.y.toFixed(1)})`
@@ -3330,23 +2709,26 @@
             u.lastRenderY = u.y;
           }
 
+          // ステータスバーの更新は、値が一定量変化した場合のみ行う
           const hpW = (u.hp / 100) * 20;
           const orgW = (u.org / u.maxOrg) * 20;
-          if (Math.abs(u.lastHpW - hpW) > 1) {
+          const updateThreshold = 1; // 1px以上の変化で更新
+
+          if (Math.abs(u.lastHpW - hpW) > updateThreshold) {
             u.bar.setAttribute("width", Math.max(0, hpW));
             u.lastHpW = hpW;
           }
-          if (Math.abs(u.lastOrgW - orgW) > 1) {
+          if (Math.abs(u.lastOrgW - orgW) > updateThreshold) {
             u.orgBar.setAttribute("width", Math.max(0, orgW));
             u.lastOrgW = orgW;
           }
 
-          if (u.supply < 30) {
-            if (u.noSupplyIcon.style.display === "none")
-              u.noSupplyIcon.style.display = "block";
-          } else {
-            if (u.noSupplyIcon.style.display === "block")
-              u.noSupplyIcon.style.display = "none";
+          // 補給アイコンの表示/非表示も状態変化時のみ
+          const needsSupplyIcon = u.supply < 30;
+          if (needsSupplyIcon && u.noSupplyIcon.style.display === "none") {
+            u.noSupplyIcon.style.display = "block";
+          } else if (!needsSupplyIcon && u.noSupplyIcon.style.display === "block") {
+            u.noSupplyIcon.style.display = "none";
           }
         },
       };
@@ -3414,10 +2796,10 @@
           }
         },
         loop: function (currentTime) {
-          Renderer.cacheBounds();
+          Renderer.cacheBounds(); // 描画領域をキャッシュ
           const dt = (currentTime - this.lastTime) / 1000;
           this.lastTime = currentTime;
-          const safeDt = Math.min(dt, 0.1);
+          const safeDt = Math.min(dt, 0.1); // 過度なdeltaTimeを防止
 
           if (this.running) {
             const speedMultiplier = this.speed === 5 ? 10 : this.speed * 2;
@@ -3427,7 +2809,7 @@
               this.processTick();
               this.accTime -= this.tickDuration;
             }
-            this.updateUnits(scaledDt);
+            this.updateUnits(scaledDt); // Call updateUnits here
           }
           Renderer.update();
           requestAnimationFrame((t) => this.loop(t));
@@ -3499,7 +2881,7 @@
               const id = props.id
                 ? "P" + props.id
                 : name.replace(/[^a-zA-Z0-9]/g, "");
-
+              
               // 基本設定
               this.countries[id] = {
                 tag: id,
@@ -3518,12 +2900,12 @@
                 focusProg: 0,
                 completedFocuses: [],
                 faction: null,
-                template: DB.AITemplates.basic_inf,
+                template: DB.AITemplates.basic_inf, // デフォルトは基本歩兵
                 buildingFactory: null,
                 treeType: "GENERIC",
                 peaceTimer: 0,
                 supplyMap: new Set(),
-                ideology: "中立",
+                ideology: "中立"
               };
 
               const c = this.countries[id];
@@ -3539,7 +2921,7 @@
                 c.mp = 300000;
                 c.fac = 20;
                 c.treeType = "GUNMA";
-                c.template = DB.AITemplates.tank_div; // 機甲師団
+                c.template = DB.AITemplates.tank_div; // 初期テンプレートを戦車師団に
               }
 
               // 2. 帝政千葉 (イタリア枠)
@@ -3559,10 +2941,11 @@
                 c.col = "#d81b60"; // ポーランド色
                 c.faction = "Kanto_Allies";
                 c.treeType = "GENERIC"; // 汎用だが防御寄りAIにする
-              } else if (name.includes("Ibaraki") || name.includes("茨城")) {
+              }
+              else if (name.includes("Ibaraki") || name.includes("茨城")) {
                 c.name = "茨城公国";
                 c.flag = "🌾";
-                c.col = "#ad1457";
+                c.col = "#ad1457"; 
                 c.faction = "Kanto_Allies";
               }
 
@@ -3589,9 +2972,9 @@
                 c.mp = 200000;
                 c.treeType = "TOKYO";
                 c.faction = "Kanto_Allies";
-                c.template = DB.AITemplates.elite_tank;
+                c.template = DB.AITemplates.elite_tank; // エリート戦車師団
               }
-
+              
               // 6. 神奈川 (追加：関東連合入り)
               else if (name.includes("Kanagawa") || name.includes("神奈川")) {
                 c.name = "神奈川自由国";
@@ -3610,69 +2993,45 @@
                 c.fac = 30;
                 c.mp = 500000;
                 c.treeType = "HOKKAIDO";
-                c.template = DB.AITemplates.mech_div;
+                c.template = DB.AITemplates.mech_div; // 機械化師団
               }
 
               // 8. 東北 (バルト三国枠)
-              else if (
-                [
-                  "Aomori",
-                  "Iwate",
-                  "Akita",
-                  "Miyagi",
-                  "Yamagata",
-                  "Fukushima",
-                ].some((n) => name.includes(n)) ||
-                ["青森", "岩手", "秋田", "宮城", "山形", "福島"].some((n) =>
-                  name.includes(n)
-                )
-              ) {
-                c.treeType = "GENERIC";
+              else if (["Aomori","Iwate","Akita","Miyagi","Yamagata","Fukushima"].some(n => name.includes(n)) || ["青森","岩手","秋田","宮城","山形","福島"].some(n => name.includes(n))) {
+                c.treeType = "GENERIC"; 
                 c.territoryDefBonus = 0.5; // 防御ボーナス特盛
                 c.col = "#546e7a"; // バルトっぽい色
               }
 
               // 9. 西日本・四国 (バトロワ)
-              else if (
-                ["Kagawa", "Tokushima", "Ehime", "Kochi"].some((n) =>
-                  name.includes(n)
-                ) ||
-                ["香川", "徳島", "愛媛", "高知"].some((n) => name.includes(n))
-              ) {
+              else if (["Kagawa","Tokushima","Ehime","Kochi"].some(n=>name.includes(n)) || ["香川","徳島","愛媛","高知"].some(n=>name.includes(n))) {
                 c.treeType = "GENERIC_WAR"; // 戦争ツリー
                 c.ideology = "群雄割拠";
               }
 
               // 10. 九州 (征服狙い)
-              else if (
-                ["Fukuoka", "Kumamoto", "Kagoshima"].some((n) =>
-                  name.includes(n)
-                ) ||
-                ["福岡", "熊本", "鹿児島"].some((n) => name.includes(n))
-              ) {
-                c.name = name.includes("Fukuoka") ? "修羅の国" : c.name;
-                c.treeType = "GENERIC_WAR";
-                c.fac += 5;
-                c.mp += 50000;
-                c.template = DB.AITemplates.bike_div; // 機動力重視
+              else if (["Fukuoka","Kumamoto","Kagoshima"].some(n=>name.includes(n)) || ["福岡","熊本","鹿児島"].some(n=>name.includes(n))) {
+                 c.name = name.includes("Fukuoka") ? "修羅の国" : c.name;
+                 c.treeType = "GENERIC_WAR";
+                 c.fac += 5;
+                 c.mp += 50000;
+                 c.template = DB.AITemplates.bike_div; // 機動力重視の自転車師団
               }
 
               // 11. 関西・愛知 (西日本征服)
-              else if (
-                ["Osaka", "Kyoto", "Aichi"].some((n) => name.includes(n)) ||
-                ["大阪", "京都", "愛知"].some((n) => name.includes(n))
-              ) {
-                c.treeType = "GENERIC_WAR";
-                c.fac += 8;
-                c.mp += 100000;
+              else if (["Osaka","Kyoto","Aichi"].some(n=>name.includes(n)) || ["大阪","京都","愛知"].some(n=>name.includes(n))) {
+                 c.treeType = "GENERIC_WAR";
+                 c.fac += 8;
+                 c.mp += 100000;
               }
-
+              
               // 12. 石川 (北陸征服)
               else if (name.includes("Ishikawa") || name.includes("石川")) {
                 c.name = "加賀百万石";
                 c.treeType = "GENERIC_WAR";
                 c.fac += 5;
               }
+
             });
           }
         },
@@ -3683,13 +3042,11 @@
             setTimeout(() => this.declareWar(this.player, target), 2000);
           }
         },
-        justifyWarTarget: function (targetName, myTag) {
-          const targetTag = Object.keys(Game.countries).find((t) =>
-            Game.countries[t].name.includes(targetName)
-          );
-          if (targetTag) {
-            Game.declareWar(myTag, targetTag);
-          }
+        justifyWarTarget: function(targetName, myTag) {
+           const targetTag = Object.keys(Game.countries).find(t => Game.countries[t].name.includes(targetName));
+           if(targetTag) {
+              Game.declareWar(myTag, targetTag);
+           }
         },
         calcStats: function (tmpl) {
           let s = {
@@ -3771,162 +3128,249 @@
             supply: 100,
           };
           this.units.push(u);
-          this.addToGrid(u, hex);
+          this.addToGrid(u, hex); // <--- THIS IS LINE 3126
           Renderer.addUnit(u);
         },
-        addToGrid: function (u, hex) {
-          if (!this.unitGrid.has(hex.id)) this.unitGrid.set(hex.id, []);
-          this.unitGrid.get(hex.id).push(u);
-        },
-        removeFromGrid: function (u, hex) {
-          if (!this.unitGrid.has(hex.id)) return;
-          const arr = this.unitGrid.get(hex.id);
-          const idx = arr.indexOf(u);
-          if (idx !== -1) arr.splice(idx, 1);
-        },
-        getEnemyInHex: function (hex, myTag) {
-          if (!this.unitGrid.has(hex.id)) return null;
-          const enemies = this.unitGrid
-            .get(hex.id)
-            .filter((u) => u.tag !== myTag && this.isWar(u.tag, myTag));
-          return enemies.length > 0 ? enemies[0] : null;
-        },
-        calcSupplyAll: function () {
-          Object.keys(this.countries).forEach((tag) => {
-            const c = this.countries[tag];
-            if (!c.capital) return;
-            const q = [c.capital];
-            const visited = new Set();
-            visited.add(c.capital.id);
-            let head = 0;
-            while (head < q.length) {
-              const curr = q[head++];
-              curr.adj.forEach((n) => {
-                if (n.owner === tag && !visited.has(n.id)) {
-                  visited.add(n.id);
-                  q.push(n);
-                }
-              });
+        // --- ADDED: Functions for unit grid management and combat ---
+        addToGrid: function(unit, hex) {
+            if (!this.unitGrid.has(hex.id)) {
+                this.unitGrid.set(hex.id, []);
             }
-            c.supplyMap = visited;
-          });
+            this.unitGrid.get(hex.id).push(unit);
         },
+
+        removeFromGrid: function(unit, hex) {
+            if (this.unitGrid.has(hex.id)) {
+                const unitsInHex = this.unitGrid.get(hex.id);
+                const index = unitsInHex.indexOf(unit);
+                if (index > -1) {
+                    unitsInHex.splice(index, 1);
+                }
+                if (unitsInHex.length === 0) {
+                    this.unitGrid.delete(hex.id);
+                }
+            }
+        },
+
+        getEnemyInHex: function(hex, myTag) {
+            if (!this.unitGrid.has(hex.id)) return null;
+            const units = this.unitGrid.get(hex.id);
+            return units.find(u => u.tag !== myTag && this.isWar(myTag, u.tag));
+        },
+
         updateUnits: function (dt) {
-          for (let i = this.units.length - 1; i >= 0; i--) {
-            const u = this.units[i];
-            if (u.hp <= 0) {
-              this.removeFromGrid(u, u.hex);
-              if (u.el) u.el.remove();
-              this.units.splice(i, 1);
-              continue;
-            }
+            const moveSpeed = 50; // Pixels per second at base speed
+            const unitMoveFactor = 0.5; // How much of the unit's speed stat affects actual movement speed
 
-            if (u.state === "moving" && u.path.length) {
-              const next = u.path[0];
-              if (!next) {
-                u.path = [];
-                u.state = "idle";
-                continue;
-              }
+            for (let i = this.units.length - 1; i >= 0; i--) {
+                const u = this.units[i];
+                if (!u.el) continue; // Ensure element exists for rendering
 
-              const enemyHere = this.getEnemyInHex(u.hex, u.tag);
-              const enemyInNext =
-                Math.hypot(next.x - u.x, next.y - u.y) < 15
-                  ? this.getEnemyInHex(next, u.tag)
-                  : null;
-              const enemy = enemyHere || enemyInNext;
+                // Supply decay
+                u.supply -= 0.05 * dt; // Decay over time
+                if (u.supply < 0) u.supply = 0;
 
-              if (enemy) {
-                if (!u.isFighting) {
-                  if (u.innerEl) u.innerEl.classList.add("fighting");
-                  u.isFighting = true;
+                // Organization recovery
+                if (u.org < u.maxOrg) {
+                    u.org += 0.5 * dt; // Recover slowly
+                    if (u.org > u.maxOrg) u.org = u.maxOrg;
                 }
 
-                const myDmg = Math.max(1, u.stats.sa * 0.1) * dt;
-                const enemyDmg = Math.max(1, enemy.stats.sa * 0.1) * dt;
+                // Remove dead units
+                if (u.hp <= 0) {
+                    this.removeFromGrid(u, u.hex);
+                    u.el.remove();
+                    this.units.splice(i, 1);
+                    Input.selUnits = Input.selUnits.filter(su => su !== u); // Remove from selected units
+                    UI.notify(`${this.countries[u.tag].name} の師団が壊滅！`, "danger");
+                    continue;
+                }
 
-                enemy.org -= myDmg * 0.5;
-                enemy.hp -= myDmg * 0.1;
-                u.org -= enemyDmg * 0.5;
-                u.hp -= enemyDmg * 0.1;
+                // Movement
+                if (u.state === "moving" && u.path.length > 0) {
+                    const nextHex = u.path[0];
+                    const distToTarget = Math.hypot(nextHex.x - u.x, nextHex.y - u.y);
+                    const actualMoveSpeed = (moveSpeed + u.stats.spd * unitMoveFactor) * dt;
 
-                if (u.org <= 0) {
-                  u.org = 0;
-                  u.state = "idle";
-                  u.path = [];
-                  if (u.isFighting && u.innerEl) {
+                    if (distToTarget <= actualMoveSpeed) {
+                        // Reached next hex
+                        u.x = nextHex.x;
+                        u.y = nextHex.y;
+
+                        // Remove from old hex grid, add to new
+                        this.removeFromGrid(u, u.hex);
+                        u.hex = nextHex;
+                        this.addToGrid(u, u.hex);
+
+                        u.path.shift(); // Remove current hex from path
+
+                        // Check for conquest
+                        if (u.hex.owner !== u.tag && !this.isWar(u.tag, u.hex.owner) && u.hex.owner !== "_SEA") {
+                            this.conquerHex(u, u.hex);
+                            UI.notify(`${this.countries[u.tag].name} が ${this.countries[u.hex.owner].name} を占領！`, "success");
+                        }
+
+                        // Check for battle
+                        const enemyUnits = this.unitGrid.get(u.hex.id)?.filter(eu => eu.tag !== u.tag && this.isWar(u.tag, eu.tag));
+                        if (enemyUnits && enemyUnits.length > 0) {
+                            u.state = "fighting";
+                            u.innerEl.classList.add("fighting");
+                            enemyUnits.forEach(eu => {
+                                eu.state = "fighting";
+                                eu.innerEl.classList.add("fighting");
+                            });
+                        }
+
+                        if (u.path.length === 0) {
+                            u.state = "idle";
+                            u.innerEl.classList.remove("fighting");
+                        }
+                    } else {
+                        // Move towards next hex
+                        const angle = Math.atan2(nextHex.y - u.y, nextHex.x - u.x);
+                        u.x += Math.cos(angle) * actualMoveSpeed;
+                        u.y += Math.sin(angle) * actualMoveSpeed;
+                    }
+                }
+
+                // Battle simulation
+                const unitsInHex = this.unitGrid.get(u.hex.id);
+                if (u.state === "fighting" && unitsInHex && unitsInHex.length > 1) {
+                    this.battle(u.hex);
+                } else if (u.state === "fighting" && (!unitsInHex || unitsInHex.filter(eu => eu.tag !== u.tag && this.isWar(u.tag, eu.tag)).length === 0)) {
+                    u.state = "idle"; // No more enemies in hex, stop fighting
                     u.innerEl.classList.remove("fighting");
-                    u.isFighting = false;
-                  }
-                }
-                continue;
-              } else {
-                if (u.isFighting && u.innerEl) {
-                  u.innerEl.classList.remove("fighting");
-                  u.isFighting = false;
-                }
-              }
-
-              const unitSpeed =
-                u.stats.spd *
-                (u.org / u.maxOrg) *
-                Math.max(0.1, u.supply / 100) *
-                (1 + (this.countries[u.tag].speedBonus || 0));
-
-              const terrainMoveCost = DB.Terrain[next.type]?.moveCost || 1;
-              const baseSpeed = 10;
-              const step = (unitSpeed / terrainMoveCost) * baseSpeed * dt * 0.7;
-
-              const dx = next.x - u.x,
-                dy = next.y - u.y;
-              const dist = Math.hypot(dx, dy);
-
-              if (
-                dist < 10 &&
-                next.owner !== "_SEA" &&
-                next.owner !== u.tag &&
-                this.isWar(u.tag, next.owner) &&
-                !this.isAlly(u.tag, next.owner)
-              ) {
-                if (u.org > 5) this.conquerHex(u, next);
-              }
-
-              // ゼロ除算防止と到達判定
-              if (dist <= Math.max(step, 0.01) || isNaN(dist)) {
-                this.removeFromGrid(u, u.hex);
-                u.x = next.x;
-                u.y = next.y;
-                u.hex = next;
-                u.path.shift();
-                this.addToGrid(u, next);
-
-                if (
-                  u.hex.owner !== "_SEA" &&
-                  u.hex.owner !== u.tag &&
-                  this.isWar(u.tag, u.hex.owner) &&
-                  !this.isAlly(u.tag, u.hex.owner)
-                ) {
-                  if (u.org > 5) this.conquerHex(u, u.hex);
                 }
 
-                if (u.path.length === 0) u.state = "idle";
-              } else {
-                u.x += (dx / dist) * step;
-                u.y += (dy / dist) * step;
-              }
-            } else {
-              if (u.isFighting && u.innerEl) {
-                u.innerEl.classList.remove("fighting");
-                u.isFighting = false;
-              }
-              if (u.org < u.maxOrg) {
-                u.org += 5 * dt;
-                if (u.org > u.maxOrg) u.org = u.maxOrg;
-              }
+                // Apply supply effects
+                if (u.supply < 30) {
+                    u.org -= 1 * dt; // Org loss due to low supply
+                    if (u.org < 0) u.org = 0;
+                }
+
+                // Update unit rendering
+                Renderer.updateUnit(u);
             }
-            Renderer.updateUnit(u);
-          }
         },
+
+        battle: function(hex) {
+            const unitsInHex = this.unitGrid.get(hex.id);
+            if (!unitsInHex || unitsInHex.length < 2) return;
+
+            // Group units by tag
+            const factions = {};
+            unitsInHex.forEach(u => {
+                if (!factions[u.tag]) factions[u.tag] = [];
+                factions[u.tag].push(u);
+            });
+
+            const tags = Object.keys(factions);
+            if (tags.length < 2) return; // Only one faction, no battle
+
+            // Find two opposing factions for simplicity
+            let attackerTag = null;
+            let defenderTag = null;
+            for(let i = 0; i < tags.length; i++) {
+                for(let j = i + 1; j < tags.length; j++) {
+                    if (this.isWar(tags[i], tags[j])) {
+                        attackerTag = tags[i];
+                        defenderTag = tags[j];
+                        break;
+                    }
+                }
+                if (attackerTag) break;
+            }
+
+            if (!attackerTag || !defenderTag) return; // No opposing factions found
+
+            const attackers = factions[attackerTag];
+            const defenders = factions[defenderTag];
+
+            // Calculate combined stats
+            const getCombinedStats = (units) => {
+                let sa = 0, ha = 0, def = 0, brk = 0, arm = 0, org = 0, count = 0;
+                units.forEach(u => {
+                    if (u.org > 0) { // Only fighting units contribute
+                        sa += u.stats.sa;
+                        ha += u.stats.ha;
+                        def += u.stats.def;
+                        brk += u.stats.brk;
+                        arm += u.stats.arm;
+                        org += u.org;
+                        count++;
+                    }
+                });
+                return { sa, ha, def, brk, arm, org: org / count || 0, count };
+            };
+
+            const attStats = getCombinedStats(attackers);
+            const defStats = getCombinedStats(defenders);
+
+            if (attStats.count === 0 || defStats.count === 0) {
+                // Battle ended if one side has no more fighting units
+                unitsInHex.forEach(u => {
+                    u.state = "idle";
+                    u.innerEl.classList.remove("fighting");
+                });
+                return;
+            }
+
+            // Apply defense bonus from terrain/owner
+            let defBonus = 1;
+            if (hex.owner === defenderTag) {
+                defBonus += (this.countries[defenderTag].territoryDefBonus || 0);
+            }
+            // Apply war support effects to organization
+            const attOrgFactor = 1 + (this.countries[attackerTag].ws / 100 - 0.5); // Higher WS means better org
+            const defOrgFactor = 1 + (this.countries[defenderTag].ws / 100 - 0.5);
+
+            // Damage calculation (simplified)
+            const attackPower = Math.max(0, attStats.sa * attStats.org/100 * attOrgFactor);
+            const defensePower = Math.max(0, defStats.def * defStats.org/100 * defBonus * defOrgFactor);
+            const breakthroughPower = Math.max(0, attStats.brk * attStats.org/100 * attOrgFactor);
+
+            // Determine damage to organization and HP
+            const orgDamageToDefenders = Math.max(0, attackPower - defensePower) * 0.1; // Org damage
+            const hpDamageToDefenders = Math.max(0, attackPower - defensePower) * 0.01; // HP damage
+
+            const orgDamageToAttackers = Math.max(0, defStats.sa * defStats.org/100 * defOrgFactor - breakthroughPower) * 0.1;
+            const hpDamageToAttackers = Math.max(0, defStats.sa * defStats.org/100 * defOrgFactor - breakthroughPower) * 0.01;
+
+            // Apply damage to units
+            defenders.forEach(u => {
+                u.org -= orgDamageToDefenders / defenders.length;
+                u.hp -= hpDamageToDefenders / defenders.length;
+                if (u.org < 0) u.org = 0;
+                if (u.hp < 0) u.hp = 0;
+                if (u.org === 0) u.state = "idle"; // Routed
+            });
+            attackers.forEach(u => {
+                u.org -= orgDamageToAttackers / attackers.length;
+                u.hp -= hpDamageToAttackers / attackers.length;
+                if (u.org < 0) u.org = 0;
+                if (u.hp < 0) u.hp = 0;
+                if (u.org === 0) u.state = "idle"; // Routed
+            });
+
+            // If a side is completely routed or destroyed, battle ends
+            const remainingAttackers = attackers.filter(u => u.org > 0 && u.hp > 0);
+            const remainingDefenders = defenders.filter(u => u.org > 0 && u.hp > 0);
+
+            if (remainingAttackers.length === 0) {
+                attackers.forEach(u => { u.state = "idle"; u.innerEl.classList.remove("fighting"); });
+                defenders.forEach(u => { u.state = "idle"; u.innerEl.classList.remove("fighting"); });
+                UI.notify(`${this.countries[attackerTag].name} の部隊が ${hex.id} で敗走！`, "warn");
+            } else if (remainingDefenders.length === 0) {
+                attackers.forEach(u => { u.state = "idle"; u.innerEl.classList.remove("fighting"); });
+                defenders.forEach(u => { u.state = "idle"; u.innerEl.classList.remove("fighting"); });
+                UI.notify(`${this.countries[defenderTag].name} の部隊が ${hex.id} で壊滅！`, "success");
+            } else {
+                // If battle continues, ensure units are marked as fighting
+                attackers.forEach(u => u.innerEl.classList.add("fighting"));
+                defenders.forEach(u => u.innerEl.classList.add("fighting"));
+            }
+        },
+        // --- END ADDED FUNCTIONS ---
         recruit: function () {
           const c = this.countries[this.player];
           const stats = this.calcStats(c.template);
@@ -3971,6 +3415,45 @@
           c.buildingFactory = { cost: 10, progress: 0, name: "県営工場建設" };
           UI.notify("県営工場の建設を開始しました", "success");
           UI.update();
+        },
+        calcSupplyAll: function () {
+          // 1. Recalculate supply lines for all countries
+          Object.values(this.countries).forEach((c) => {
+            if (c.tag === "_SEA" || c.dead || !c.capital) return;
+            
+            // Clear previous supply map
+            c.supplyMap.clear();
+
+            // Breadth-First Search (BFS) from Capital
+            // Units are in supply if they can trace a path to the capital through owned territory
+            const queue = [c.capital];
+            c.supplyMap.add(c.capital.id);
+            const visited = new Set([c.capital.id]);
+
+            while(queue.length > 0) {
+                const curr = queue.shift();
+                
+                // Check neighbors
+                curr.adj.forEach(n => {
+                    // Passable if owned by same country
+                    if(n.owner === c.tag && !visited.has(n.id)) {
+                        visited.add(n.id);
+                        c.supplyMap.add(n.id);
+                        queue.push(n);
+                    }
+                });
+            }
+          });
+
+          // 2. Replenish supply for units in supplied hexes
+          this.units.forEach(u => {
+              const c = this.countries[u.tag];
+              // If unit is in a hex marked as supplied, refill supply
+              if(c && c.supplyMap.has(u.hex.id)) {
+                  u.supply = 100;
+              }
+              // Note: Decay happens in updateUnits loop
+          });
         },
         calcCapitals: function () {
           Object.values(this.countries).forEach((c) => {
@@ -4505,7 +3988,7 @@
           const c = Game.countries[tag];
           if (!c || c.provs.length === 0 || c.dead) return;
 
-          // --- 1. 内政・徴兵 (変更なし) ---
+          // --- 1. 内政・徴兵 ---
           if (!c.focus && !c.buildingFactory) {
             const tree = DB.FocusTree[c.treeType] || DB.FocusTree.GENERIC;
             const available = tree.filter(
@@ -4517,6 +4000,7 @@
                 (!f.cond || f.cond(c))
             );
             if (available.length > 0) {
+              // AIはランダムにフォーカスを選択
               c.focus = available[Math.floor(Math.random() * available.length)];
               c.focusProg = 0;
             } else if (c.pp >= 70 && Math.random() < 0.2) {
@@ -4531,7 +4015,7 @@
 
           const myUnits = Game.units.filter((u) => u.tag === tag);
           // 師団上限を少し緩和（攻撃には数が必要）
-          const armyLimit = 40;
+          const armyLimit = 40 + Math.floor(c.fac / 2); // 工場数に応じて上限を増やす
           const enemies = Game.wars
             .filter((w) => w.atk === tag || w.def === tag)
             .map((w) => (w.atk === tag ? w.def : w.atk));
@@ -4539,11 +4023,44 @@
           if (
             c.mp > 1500 &&
             myUnits.length < armyLimit &&
-            (enemies.length > 0 || Math.random() < 0.1)
+            (enemies.length > 0 || Math.random() < 0.1) // 戦争中か、たまに徴兵
           ) {
             let targetTmpl = DB.AITemplates.basic_inf;
-            if (c.fac > 12 && Math.random() < 0.5)
+
+            // AIの工場数やXP、treeTypeに応じて師団テンプレートを選択
+            if (c.treeType === "GUNMA") {
+              // グンマー帝国は機甲師団・戦車師団を優先
+              if (c.fac >= 25 && c.xp >= 50 && Math.random() < 0.7) {
+                targetTmpl = DB.AITemplates.elite_tank;
+              } else if (c.fac >= 15 && c.xp >= 30 && Math.random() < 0.5) {
+                targetTmpl = DB.AITemplates.tank_div;
+              } else if (c.fac >= 10 && Math.random() < 0.3) {
+                targetTmpl = DB.AITemplates.mot_div;
+              } else {
+                targetTmpl = DB.AITemplates.strong_inf;
+              }
+            } else if (c.treeType === "HOKKAIDO") {
+              // 北海道は機械化師団を優先
+              if (c.fac >= 20 && c.xp >= 40 && Math.random() < 0.6) {
+                targetTmpl = DB.AITemplates.mech_div;
+              } else if (c.fac >= 10 && Math.random() < 0.4) {
+                targetTmpl = DB.AITemplates.mot_div;
+              } else {
+                targetTmpl = DB.AITemplates.strong_inf;
+              }
+            } else if (c.treeType === "GENERIC_WAR") {
+                // 戦争志向のAIは機動力のある師団を優先
+                if (c.fac >= 10 && Math.random() < 0.4) {
+                    targetTmpl = DB.AITemplates.bike_div;
+                } else if (c.fac >= 15 && Math.random() < 0.3) {
+                    targetTmpl = DB.AITemplates.mot_div;
+                } else {
+                    targetTmpl = DB.AITemplates.strong_inf;
+                }
+            } else if (c.fac >= 10 && Math.random() < 0.3) {
+              // その他、工場が多いAIは強力な歩兵師団
               targetTmpl = DB.AITemplates.strong_inf;
+            }
 
             const stats = Game.calcStats(targetTmpl);
             if (c.eq >= stats.cost) {
@@ -4553,9 +4070,7 @@
             }
           }
 
-          // --- 2. 戦線構築と攻撃 (省略なし) ---
-          // ... (同じロジックを維持、ただしAI呼び出し頻度は下がる)
-
+          // --- 2. 戦線構築と攻撃 ---
           const frontHexes = [];
           c.provs.forEach((p) => {
             const hasEnemy = p.adj.some(
@@ -4593,13 +4108,16 @@
             if (u.state !== "idle") continue;
 
             if (u.org < 20 || u.supply < 20) {
+              // 組織率や補給が低い場合は後退を試みる
               const safeHex = u.hex.adj.find(
                 (n) => n.owner === tag && !frontHexes.includes(n)
               );
               if (safeHex) {
-                u.path = [safeHex];
-                u.state = "moving";
-                actions++;
+                u.path = Input.findPath(u.hex, safeHex, u.tag, 200); // AIの探索深度を浅く
+                if (u.path && u.path.length > 0) {
+                    u.state = "moving";
+                    actions++;
+                }
               }
               continue;
             }
@@ -4619,11 +4137,7 @@
               const enemyUnit = Game.getEnemyInHex(target, tag);
               let exposure = 0;
               target.adj.forEach((tn) => {
-                if (
-                  tn.owner !== tag &&
-                  tn.owner !== "_SEA" &&
-                  Game.isWar(tag, tn.owner)
-                )
+                if (tn.owner !== tag && tn.owner !== "_SEA" && Game.isWar(tag, tn.owner))
                   exposure++;
               });
 
@@ -4635,12 +4149,11 @@
                 if (u.org > 60 && u.org > enemyUnit.org) shouldAttack = true;
                 if (u.org > 90) shouldAttack = true;
                 if (isStacked && u.org > 50) shouldAttack = true;
-                if (exposure >= 3 && u.org < 95 && !isStacked)
-                  shouldAttack = false;
+                if (exposure >= 3 && u.org < 95 && !isStacked) shouldAttack = false;
               }
 
               if (shouldAttack && Math.random() < 0.4) {
-                u.path = [target];
+                u.path = [target]; // 隣接ヘクスへの移動はパスファインディング不要
                 u.state = "moving";
                 actions++;
                 break;
@@ -4688,7 +4201,7 @@
             }
 
             if (target) {
-              const path = Input.findPath(u.hex, target, tag, 600);
+              const path = Input.findPath(u.hex, target, tag, 300); // AIの探索深度を浅く
               if (path && path.length) {
                 u.path = path;
                 u.state = "moving";
@@ -4700,7 +4213,7 @@
           // --- 3. 外交 (Focus主導のみ) ---
           if (enemies.length === 0 && myUnits.length > 10) {
             const neighbors = Game.getNeighbors(tag);
-
+            
             // Focusツリーが完了した（取得可能なFocusがない）場合のみ、手詰まり打開のために宣戦布告を行う
             // ただし GENERIC (東北など) は除外して、ひたすら引きこもる
             const tree = DB.FocusTree[c.treeType] || DB.FocusTree.GENERIC;
@@ -4708,11 +4221,11 @@
               (f) =>
                 !c.completedFocuses.includes(f.id) &&
                 f.req.every((r) => c.completedFocuses.includes(r)) &&
-                (!f.mut || !f.mut.some((m) => c.completedFocuses.includes(m)))
+                (!f.mut ||
+                  !f.mut.some((m) => c.completedFocuses.includes(m)))
             );
-
-            const isFocusTreeDone =
-              availableFocus.length === 0 && !c.focus && !c.buildingFactory;
+            
+            const isFocusTreeDone = (availableFocus.length === 0 && !c.focus && !c.buildingFactory);
 
             if (
               isFocusTreeDone &&
