@@ -6,7 +6,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, orientation=landscape"
     />
-    <title>都道府県War</title>
+    <title>都道府県War: 電撃戦強化版 (Blitzkrieg)</title>
     <style>
       /* === 全体設定 === */
       body {
@@ -870,7 +870,7 @@
           text-shadow: 0 0 10px #500;
         "
       >
-        都道府県大戦 
+        都道府県大戦 (WW2 Mod)
       </div>
       <div style="color: #aaa; margin-bottom: 40px; text-align: center">
         指揮する都道府県を選択セヨ
@@ -1360,9 +1360,9 @@
             name: "普通科",
             icon: "🪖",
             type: "bat",
-            sa: 15, // バフ
-            ha: 2,
-            def: 20, // ナーフ(膠着防止)
+            sa: 25, 
+            ha: 5,
+            def: 25, 
             brk: 5,
             arm: 0,
             prc: 5,
@@ -1374,8 +1374,8 @@
             name: "特科",
             icon: "💥",
             type: "bat",
-            sa: 45,
-            ha: 5,
+            sa: 60, 
+            ha: 10,
             def: 5,
             brk: 5,
             arm: 0,
@@ -1388,10 +1388,10 @@
             name: "機甲科",
             icon: "🚜",
             type: "bat",
-            sa: 30,
-            ha: 40,
-            def: 15,
-            brk: 55,
+            sa: 40,
+            ha: 50, 
+            def: 20,
+            brk: 70, 
             arm: 50,
             prc: 45,
             org: 30,
@@ -1402,10 +1402,10 @@
             name: "即応機動",
             icon: "🚚",
             type: "bat",
-            sa: 18, // バフ
-            ha: 3,
+            sa: 22,
+            ha: 5,
             def: 20,
-            brk: 20,
+            brk: 25,
             arm: 5,
             prc: 8,
             org: 55,
@@ -1416,10 +1416,10 @@
             name: "機械化",
             icon: "🚙",
             type: "bat",
-            sa: 25,
-            ha: 15,
+            sa: 30,
+            ha: 20,
             def: 35,
-            brk: 30,
+            brk: 35,
             arm: 25,
             prc: 20,
             org: 50,
@@ -1430,10 +1430,10 @@
             name: "自転車",
             icon: "🚲",
             type: "bat",
-            sa: 16,
-            ha: 2,
-            def: 18,
-            brk: 12,
+            sa: 20,
+            ha: 3,
+            def: 20,
+            brk: 15,
             arm: 0,
             prc: 5,
             org: 55,
@@ -1472,10 +1472,10 @@
             name: "支援火砲",
             icon: "🧨",
             type: "sup",
-            sa: 25,
-            ha: 2,
+            sa: 30, 
+            ha: 5,
             def: 5,
-            brk: 5,
+            brk: 10,
             arm: 0,
             prc: 5,
             org: 0,
@@ -3176,7 +3176,6 @@
                     u.el.remove();
                     this.units.splice(i, 1);
                     Input.selUnits = Input.selUnits.filter(su => su !== u);
-                    // 【修正】プレイヤーの部隊か、重要な戦いのみ通知する（スパム防止）
                     if (u.tag === this.player) {
                         UI.notify(`我が軍の師団が壊滅しました！`, "danger");
                     }
@@ -3282,7 +3281,7 @@
             const getCombinedStats = (units) => {
                 let sa = 0, ha = 0, def = 0, brk = 0, arm = 0, org = 0, count = 0;
                 units.forEach(u => {
-                    if (u.org > 0) {
+                    if (u.hp > 0) {
                         sa += u.stats.sa;
                         ha += u.stats.ha;
                         def += u.stats.def;
@@ -3292,7 +3291,7 @@
                         count++;
                     }
                 });
-                return { sa, ha, def, brk, arm, org: org / count || 0, count };
+                return { sa, ha, def, brk, arm, org: count > 0 ? org / count : 0, count };
             };
 
             const attStats = getCombinedStats(attackers);
@@ -3310,40 +3309,37 @@
             if (hex.owner === defenderTag) {
                 defBonus += (this.countries[defenderTag].territoryDefBonus || 0);
             }
-            const attOrgFactor = 1 + (this.countries[attackerTag].ws / 100 - 0.5);
-            const defOrgFactor = 1 + (this.countries[defenderTag].ws / 100 - 0.5);
-
-            // 【修正】戦闘バランス調整（膠着防止のため、防御無視ダメージを導入）
-            // 攻撃側の基本ダメージ
-            let attackPower = attStats.sa * (attStats.org / 100) * attOrgFactor;
-            // 防御側の防御力
-            let defensePower = defStats.def * (defStats.org / 100) * defBonus * defOrgFactor;
-            // 最低保証ダメージ（削りダメージ）: 攻撃力の10%は防御に関係なく通る
-            let guaranteedDmg = attackPower * 0.1;
-            // 突破ダメージ
-            let breakDmg = Math.max(0, attackPower - defensePower) * 0.4;
             
-            // 守備側の反撃（同様のロジック）
-            let counterAttackPower = defStats.sa * (defStats.org / 100) * defOrgFactor;
-            let counterBreakthrough = attStats.brk * (attStats.org / 100) * attOrgFactor;
-            let guaranteedCounterDmg = counterAttackPower * 0.1;
-            let counterBreakDmg = Math.max(0, counterAttackPower - counterBreakthrough) * 0.4;
+            const attOrgFactor = Math.max(0.1, attStats.org / 100); 
+            const defOrgFactor = Math.max(0.1, defStats.org / 100);
 
-            // ダメージ適用
-            const totalDmgToDef = (guaranteedDmg + breakDmg) * 0.2; // 係数調整
-            const totalDmgToAtt = (guaranteedCounterDmg + counterBreakDmg) * 0.2;
+            let attackPower = attStats.sa * attOrgFactor;
+            let defensePower = defStats.def * defOrgFactor * defBonus;
+            
+            let guaranteedDmg = Math.max(5, attackPower * 0.2); 
+            let breakDmg = Math.max(0, attackPower - defensePower) * 0.8;
+            
+            let counterAttackPower = defStats.sa * defOrgFactor;
+            let counterBreakthrough = attStats.brk * attOrgFactor;
+            let guaranteedCounterDmg = Math.max(2, counterAttackPower * 0.15);
+            let counterBreakDmg = Math.max(0, counterAttackPower - counterBreakthrough) * 0.5;
+
+            const totalDmgToDef = (guaranteedDmg + breakDmg) * 0.5;
+            const totalDmgToAtt = (guaranteedCounterDmg + counterBreakDmg) * 0.5;
 
             defenders.forEach(u => {
                 u.org -= totalDmgToDef / defenders.length;
-                u.hp -= (totalDmgToDef * 0.1) / defenders.length; // HPダメージはOrgダメージの1割
+                u.hp -= (totalDmgToDef * 0.1) / defenders.length;
                 
-                // 【修正】敗走ロジック: 組織率が極端に減ったら強制後退（全滅を防ぎ戦線を動かす）
-                if (u.org < 5 && Math.random() < 0.2) {
+                if (u.org <= 0) {
+                    u.org = 0;
                     const safeHex = u.hex.adj.find(n => n.owner === u.tag && !this.unitGrid.get(n.id)?.some(eu => eu.tag !== u.tag));
                     if (safeHex) {
                         u.path = [safeHex];
                         u.state = "moving";
-                        u.org += 5; // 撤退ボーナス
+                        u.org = 10; 
+                    } else {
+                        u.hp = 0;
                     }
                 }
             });
@@ -3351,28 +3347,21 @@
             attackers.forEach(u => {
                 u.org -= totalDmgToAtt / attackers.length;
                 u.hp -= (totalDmgToAtt * 0.1) / attackers.length;
-                
-                 if (u.org < 5 && Math.random() < 0.2) {
-                     // 攻撃失敗撤退
-                    const safeHex = u.hex.adj.find(n => n.owner === u.tag);
-                    if (safeHex) {
-                        u.path = [safeHex];
-                        u.state = "moving";
-                        u.org += 5;
-                    }
-                }
+                if (u.org < 0) u.org = 0; 
             });
 
-            // 敗走判定
-            const remainingAttackers = attackers.filter(u => u.org > 0 && u.hp > 0 && u.state === "fighting");
-            const remainingDefenders = defenders.filter(u => u.org > 0 && u.hp > 0 && u.state === "fighting");
+            const remainingAttackers = attackers.filter(u => u.hp > 0 && u.state === "fighting");
+            const remainingDefenders = defenders.filter(u => u.hp > 0 && u.state === "fighting");
 
             if (remainingAttackers.length === 0) {
-                attackers.forEach(u => { if(u.state==="fighting") u.state = "idle"; u.innerEl.classList.remove("fighting"); });
                 defenders.forEach(u => { if(u.state==="fighting") u.state = "idle"; u.innerEl.classList.remove("fighting"); });
             } else if (remainingDefenders.length === 0) {
-                attackers.forEach(u => { if(u.state==="fighting") u.state = "idle"; u.innerEl.classList.remove("fighting"); });
-                defenders.forEach(u => { if(u.state==="fighting") u.state = "idle"; u.innerEl.classList.remove("fighting"); });
+                // 【修正】攻撃成功時、直ちに進軍を開始
+                attackers.forEach(u => {
+                    u.innerEl.classList.remove("fighting");
+                    u.path = [hex]; // 戦闘していた場所へ移動
+                    u.state = "moving";
+                });
             } else {
                 attackers.forEach(u => u.innerEl.classList.add("fighting"));
                 defenders.forEach(u => u.innerEl.classList.add("fighting"));
@@ -3424,7 +3413,6 @@
           UI.update();
         },
         
-        // --- ADDED: calcSupplyAll ---
         calcSupplyAll: function () {
           Object.values(this.countries).forEach((c) => {
             if (c.tag === "_SEA" || c.dead || !c.capital) return;
@@ -4054,7 +4042,7 @@
             }
           }
 
-          // --- 2. 戦線構築と攻撃 ---
+          // --- 2. 戦線構築と攻撃 (AI強化) ---
           const frontHexes = [];
           c.provs.forEach((p) => {
             const hasEnemy = p.adj.some(
@@ -4091,21 +4079,6 @@
             if (actions >= maxActions) break;
             if (u.state !== "idle") continue;
 
-            if (u.org < 20 || u.supply < 20) {
-              // 組織率や補給が低い場合は後退を試みる
-              const safeHex = u.hex.adj.find(
-                (n) => n.owner === tag && !frontHexes.includes(n)
-              );
-              if (safeHex) {
-                u.path = Input.findPath(u.hex, safeHex, u.tag, 200);
-                if (u.path && u.path.length > 0) {
-                    u.state = "moving";
-                    actions++;
-                }
-              }
-              continue;
-            }
-
             const enemyNeighbors = u.hex.adj.filter(
               (n) =>
                 n.owner !== tag &&
@@ -4113,29 +4086,25 @@
                 Game.isWar(tag, n.owner)
             );
 
-            const isStacked =
-              Game.unitGrid.get(u.hex.id) &&
-              Game.unitGrid.get(u.hex.id).length > 1;
-
+            // 【AI修正】敵がいない空き地があれば即座に占領しに行く
             for (const target of enemyNeighbors) {
               const enemyUnit = Game.getEnemyInHex(target, tag);
-              let exposure = 0;
-              target.adj.forEach((tn) => {
-                if (tn.owner !== tag && tn.owner !== "_SEA" && Game.isWar(tag, tn.owner))
-                  exposure++;
-              });
-
-              let shouldAttack = false;
-              // 攻撃ロジック緩和（膠着打破）
               if (!enemyUnit) {
-                shouldAttack = true; // 敵がいなければ進む
-              } else {
-                if (enemyUnit.org < 40) shouldAttack = true; // 敵が弱っていれば攻撃
-                if (u.org > 70) shouldAttack = true; // 元気がよければ攻撃
-                if (isStacked && u.org > 40) shouldAttack = true; // スタックしていれば攻撃
+                  // 空き地発見！突撃！
+                  u.path = [target];
+                  u.state = "moving";
+                  actions++;
+                  break; 
               }
+            }
+            
+            // 空き地進軍が決まっていれば次へ
+            if(u.state === "moving") continue;
 
-              if (shouldAttack && Math.random() < 0.6) { // 攻撃確率アップ
+            // 敵がいる場合の戦闘判断
+            for (const target of enemyNeighbors) {
+              // 敵がいても積極的に攻撃する（玉砕覚悟）
+              if (Math.random() < 0.7) { 
                 u.path = [target];
                 u.state = "moving";
                 actions++;
@@ -4154,6 +4123,7 @@
 
             let target = null;
             if (emptyFronts.length > 0) {
+              // 最も近い空き前線を探す
               let minD = Infinity;
               let bestF = null;
               let bestIdx = -1;
@@ -4171,6 +4141,7 @@
                 occupiedFronts.add(bestF.id);
               }
             } else if (enemies.length > 0) {
+              // 前線が埋まっていても向かう（増援）
               let minD = Infinity;
               let bestF = null;
               frontHexes.forEach((f) => {
@@ -4195,7 +4166,6 @@
 
           if (enemies.length === 0 && myUnits.length > 10) {
             const neighbors = Game.getNeighbors(tag);
-            
             const tree = DB.FocusTree[c.treeType] || DB.FocusTree.GENERIC;
             const availableFocus = tree.filter(
               (f) =>
@@ -4204,7 +4174,6 @@
                 (!f.mut ||
                   !f.mut.some((m) => c.completedFocuses.includes(m)))
             );
-            
             const isFocusTreeDone = (availableFocus.length === 0 && !c.focus && !c.buildingFactory);
 
             if (
