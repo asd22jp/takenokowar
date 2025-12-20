@@ -6,7 +6,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, orientation=landscape"
     />
-    <title>都道府県War: 電撃戦強化版 (Blitzkrieg Update)</title>
+    <title>都道府県War: 電撃戦強化版 (Blitzkrieg)</title>
     <style>
       /* === 全体設定 === */
       body {
@@ -870,7 +870,7 @@
           text-shadow: 0 0 10px #500;
         "
       >
-        都道府県大戦 (Blitzkrieg Mod)
+        都道府県大戦 (WW2 Mod)
       </div>
       <div style="color: #aaa; margin-bottom: 40px; text-align: center">
         指揮する都道府県を選択セヨ
@@ -1388,14 +1388,14 @@
             name: "機甲科",
             icon: "🚜",
             type: "bat",
-            sa: 50, // 強化: 対人攻撃
-            ha: 60,
-            def: 25,
-            brk: 80, // 強化: 突破
-            arm: 60, // 強化: 装甲
-            prc: 50,
-            org: 35,
-            spd: 9.0,
+            sa: 40,
+            ha: 50,
+            def: 20,
+            brk: 70,
+            arm: 50,
+            prc: 45,
+            org: 30,
+            spd: 8.0,
             cost: 3000,
           },
           mot: {
@@ -1416,13 +1416,13 @@
             name: "機械化",
             icon: "🚙",
             type: "bat",
-            sa: 35,
+            sa: 30,
             ha: 20,
-            def: 40,
-            brk: 40,
-            arm: 30,
+            def: 35,
+            brk: 35,
+            arm: 25,
             prc: 20,
-            org: 55,
+            org: 50,
             spd: 10.0,
             cost: 1800,
           },
@@ -1493,19 +1493,19 @@
           mot_div: {
             bat: ["mot", "mot", "mot", "inf"],
             sup: ["eng", "sup_art"],
-          },
+          }, // 機動歩兵中心
           mech_div: {
             bat: ["mech", "mech", "mech", "mot"],
             sup: ["eng", "rec"],
-          },
+          }, // 機械化歩兵中心
           tank_div: {
             bat: ["tank", "tank", "mot", "mot"],
             sup: ["eng", "sup_art"],
-          }, // 攻撃的主力
+          }, // 戦車中心
           elite_tank: {
             bat: ["tank", "tank", "tank", "mech", "mech"],
             sup: ["eng", "rec", "sup_art"],
-          },
+          }, // エリート戦車
         },
         FocusTree: { GENERIC: [] },
         Terrain: {
@@ -1519,7 +1519,7 @@
         tree.push({ id, x, y, t, d, cost, req, eff, mut, cond });
       };
 
-      // GENERIC
+      // 1. GENERIC (コスト10倍: 700~)
       const FT_GEN = [];
       addFocus(
         FT_GEN,
@@ -1639,7 +1639,7 @@
       );
       DB.FocusTree.GENERIC = FT_GEN;
 
-      // GENERIC_WAR (西日本/九州)
+      // 2. GENERIC_WAR (西日本/九州)
       const FT_WAR = [];
       addFocus(
         FT_WAR,
@@ -1648,14 +1648,7 @@
         100,
         "開戦準備",
         "工場+2, PP+50",
-        /*************  ✨ Windsurf Command ⭐  *************/
-        /**
-         * Run a country's AI.
-         * @param {string} tag - The country's tag.
-         * @returns {void}
-         */
-
-        /*******  385d67d7-d95a-41c0-bc1c-a2c0776add18  *******/ 700,
+        700,
         [],
         (c) => {
           c.fac += 2;
@@ -1771,7 +1764,7 @@
       );
       DB.FocusTree.GENERIC_WAR = FT_WAR;
 
-      // GUNMA (Germany)
+      // 3. GUNMA (Germany)
       const FT_GUN = [];
       addFocus(
         FT_GUN,
@@ -1964,7 +1957,7 @@
       );
       DB.FocusTree.GUNMA = FT_GUN;
 
-      // TOKYO (UK)
+      // 4. TOKYO (UK)
       const FT_TOK = [];
       addFocus(
         FT_TOK,
@@ -2084,7 +2077,7 @@
       );
       DB.FocusTree.TOKYO = FT_TOK;
 
-      // SAITAMA (France)
+      // 5. SAITAMA (France)
       const FT_SAI = [];
       addFocus(
         FT_SAI,
@@ -2196,7 +2189,7 @@
       );
       DB.FocusTree.SAITAMA = FT_SAI;
 
-      // HOKKAIDO (USSR)
+      // 6. HOKKAIDO (USSR)
       const FT_HOK = [];
       addFocus(
         FT_HOK,
@@ -2666,9 +2659,12 @@
             d.style.background = "rgba(60,60,10,.95)";
           }
           $("news-feed").prepend(d);
-          // 古いニュースを自動削除
+          // 古いニュースを自動削除してDOM要素を減らす
           const newsItems = $("news-feed").children;
-          if (newsItems.length > 5) newsItems[newsItems.length - 1].remove();
+          if (newsItems.length > 5) {
+            // 最大5件に制限
+            newsItems[newsItems.length - 1].remove();
+          }
           setTimeout(() => d.remove(), 6000);
         },
         showStartScreen: function () {
@@ -2897,6 +2893,123 @@
               }
             }
           });
+          this.mapWrapEl.addEventListener(
+            "wheel",
+            (e) => {
+              e.preventDefault();
+              const f = e.deltaY > 0 ? 0.9 : 1.1;
+              Renderer.s = Math.max(0.4, Math.min(5, Renderer.s * f));
+              Renderer.update();
+            },
+            { passive: false }
+          );
+
+          this.mapWrapEl.addEventListener(
+            "touchstart",
+            (e) => {
+              if (e.touches.length === 1) {
+                this.isDown = true;
+                this.isDrag = false;
+                this.sx = e.touches[0].clientX;
+                this.sy = e.touches[0].clientY;
+                this.lastX = this.sx;
+                this.lastY = this.sy;
+                this.isRight = false;
+
+                if (this.planMode && this.selUnits.length > 0) {
+                  this.battlePoints = [];
+                  this.startBattleLine(e.touches[0]);
+                }
+              } else if (e.touches.length === 2) {
+                this.isDown = false;
+                this.pinchDist = Math.hypot(
+                  e.touches[0].clientX - e.touches[1].clientX,
+                  e.touches[0].clientY - e.touches[1].clientY
+                );
+                this.pinchStartScale = Renderer.s;
+              }
+            },
+            { passive: false }
+          );
+          this.mapWrapEl.addEventListener(
+            "touchmove",
+            (e) => {
+              if (this.planMode) e.preventDefault();
+              if (e.touches.length === 1 && this.isDown) {
+                const cx = e.touches[0].clientX;
+                const cy = e.touches[0].clientY;
+
+                if (this.planMode && this.selUnits.length > 0) {
+                  this.updateBattleLine(e.touches[0]);
+                } else {
+                  const dx = cx - this.lastX;
+                  const dy = cy - this.lastY;
+                  if (
+                    Math.abs(cx - this.sx) > 5 ||
+                    Math.abs(cy - this.sy) > 5
+                  ) {
+                    this.isDrag = true;
+                    this.mapWrapEl.style.pointerEvents = "none";
+                  }
+                  if (this.isDrag) {
+                    Renderer.x += dx;
+                    Renderer.y += dy;
+                    Renderer.update();
+                  }
+                }
+                this.lastX = cx;
+                this.lastY = cy;
+              } else if (e.touches.length === 2) {
+                e.preventDefault();
+                const dist = Math.hypot(
+                  e.touches[0].clientX - e.touches[1].clientX,
+                  e.touches[0].clientY - e.touches[1].clientY
+                );
+                const scale = (dist / this.pinchDist) * this.pinchStartScale;
+                Renderer.s = Math.max(0.4, Math.min(5, scale));
+                Renderer.update();
+              }
+            },
+            { passive: false }
+          );
+          this.mapWrapEl.addEventListener("touchend", (e) => {
+            this.isDown = false;
+            this.mapWrapEl.style.pointerEvents = "auto";
+
+            if (
+              this.planMode &&
+              this.selUnits.length > 0 &&
+              this.battlePoints.length > 1
+            ) {
+              this.executeBattlePlan();
+              this.togglePlanMode();
+              return;
+            } else if (
+              !this.isDrag &&
+              e.changedTouches.length > 0 &&
+              !this.planMode
+            ) {
+              const t = document.elementFromPoint(
+                e.changedTouches[0].clientX,
+                e.changedTouches[0].clientY
+              );
+              if (t) {
+                if (t.classList.contains("hex")) {
+                  const h = MapSys.hexes[t.dataset.id];
+                  if (h)
+                    this.onHexClick({ button: 0, preventDefault: () => {} }, h);
+                } else if (t.closest(".unit-grp")) {
+                  const uEl = t.closest(".unit-grp");
+                  const u = Game.units.find((x) => x.el === uEl);
+                  if (u)
+                    this.onHexClick(
+                      { button: 0, preventDefault: () => {} },
+                      u.hex
+                    );
+                }
+              }
+            }
+          });
         },
         togglePlanMode: function () {
           this.planMode = !this.planMode;
@@ -3039,7 +3152,7 @@
             this.hlUnits();
           } else if (e.button === 2 && this.selUnits.length) {
             const uTag = this.selUnits[0].tag;
-            const path = this.findPath(this.selUnits[0].hex, hex, uTag, 5000);
+            const path = this.findPath(this.selUnits[0].hex, hex, uTag, 5000); // プレイヤーは探索深度を深く
             if (path && path.length > 0) {
               this.selUnits.forEach((u) => {
                 u.path = [...path];
@@ -3072,6 +3185,7 @@
         },
         findPath: function (start, end, unitTag, maxSearch = 300) {
           const cacheKey = `${start.id}-${end.id}-${unitTag}`;
+          // キャッシュの有効期限を短くして、戦況の変化に敏感にする (2日)
           if (this.pathCache.has(cacheKey)) {
             const cached = this.pathCache.get(cacheKey);
             if (Game.day - cached.day < 2) return [...cached.path];
@@ -3092,7 +3206,7 @@
           let steps = 0;
 
           while (openList.length > 0) {
-            if (steps++ > maxSearch) break;
+            if (steps++ > maxSearch) break; // 探索深度制限
 
             openList.sort((a, b) => {
               const fa = fScore.get(a.id);
@@ -3109,7 +3223,9 @@
                 path.unshift(temp);
                 temp = cameFrom.get(temp.id);
               }
+              // キャッシュのサイズ制限
               if (this.pathCache.size > 2000) {
+                // 古いキャッシュを削除
                 const oldestKey = this.pathCache.keys().next().value;
                 this.pathCache.delete(oldestKey);
               }
@@ -3128,12 +3244,14 @@
               const isWarTarget = Game.isWar(unitTag, neighbor.owner);
               const isAlly = Game.isAlly(unitTag, neighbor.owner);
 
+              // 敵地(isWarTarget)も通過可能としてコスト計算に含める
               if (!isSea && !isMyLand && !isWarTarget && !isAlly) {
                 continue;
               }
 
+              // 敵地への移動はコストを高くする（安全な自領土を通るルートを優先させつつ、必要なら敵地を行く）
               const baseCost = isSea ? 5 : 1;
-              const warCost = isWarTarget ? 3 : 0;
+              const warCost = isWarTarget ? 3 : 0; // 敵地はコスト増
               const moveCost = baseCost + warCost;
 
               const tentativeG = gScore.get(current.id) + moveCost;
@@ -3196,8 +3314,8 @@
           u.orgBar = inner.querySelector(".unit-org-bar");
           u.lastRenderX = u.x;
           u.lastRenderY = u.y;
-          u.lastHpW = 0;
-          u.lastOrgW = 0;
+          u.lastHpW = 0; // 初回描画用に初期化
+          u.lastOrgW = 0; // 初回描画用に初期化
 
           const noSupply = document.createElementNS(
             "http://www.w3.org/2000/svg",
@@ -3212,15 +3330,18 @@
           u.noSupplyIcon = noSupply;
         },
         updateUnit: function (u) {
+          // 軽量化: キャッシュされたBoundsを使用
           const mapWrapRect = this.cachedMapBounds;
-          if (!mapWrapRect) return;
+          if (!mapWrapRect) return; // 初回用
 
           const screenX = u.x * this.s + this.x;
           const screenY = u.y * this.s + this.y;
-          const padding = 50;
+          const padding = 50; // 画面外カリングの余裕
 
+          // ユニット要素がまだ存在しない場合はスキップ
           if (!u.el) return;
 
+          // 画面外カリング (DOM更新をスキップ)
           if (
             screenX < -padding ||
             screenX > mapWrapRect.width + padding ||
@@ -3232,13 +3353,15 @@
           }
           if (u.el.style.display === "none") u.el.style.display = "";
 
+          // 安全装置: 座標が不正ならヘクス中心に強制リセット
           if (!isFinite(u.x) || !isFinite(u.y)) {
             u.x = u.hex.x;
             u.y = u.hex.y;
           }
 
+          // ユニットの位置更新は、実際の移動があった場合のみ
           if (
-            Math.abs(u.x - u.lastRenderX) > 0.5 ||
+            Math.abs(u.x - u.lastRenderX) > 0.5 || // 閾値を設けて微細な動きでは更新しない
             Math.abs(u.y - u.lastRenderY) > 0.5
           ) {
             u.el.setAttribute(
@@ -3249,9 +3372,10 @@
             u.lastRenderY = u.y;
           }
 
+          // ステータスバーの更新は、値が一定量変化した場合のみ行う
           const hpW = (u.hp / 100) * 20;
           const orgW = (u.org / u.maxOrg) * 20;
-          const updateThreshold = 1;
+          const updateThreshold = 1; // 1px以上の変化で更新
 
           if (Math.abs(u.lastHpW - hpW) > updateThreshold) {
             u.bar.setAttribute("width", Math.max(0, hpW));
@@ -3262,6 +3386,7 @@
             u.lastOrgW = orgW;
           }
 
+          // 補給アイコンの表示/非表示も状態変化時のみ
           const needsSupplyIcon = u.supply < 30;
           if (needsSupplyIcon && u.noSupplyIcon.style.display === "none") {
             u.noSupplyIcon.style.display = "block";
@@ -3340,7 +3465,7 @@
           Renderer.cacheBounds(); // 描画領域をキャッシュ
           const dt = (currentTime - this.lastTime) / 1000;
           this.lastTime = currentTime;
-          const safeDt = Math.min(dt, 0.1);
+          const safeDt = Math.min(dt, 0.1); // 過度なdeltaTimeを防止
 
           if (this.running) {
             const speedMultiplier = this.speed === 5 ? 10 : this.speed * 2;
@@ -3350,7 +3475,7 @@
               this.processTick();
               this.accTime -= this.tickDuration;
             }
-            this.updateUnits(scaledDt);
+            this.updateUnits(scaledDt); // Call updateUnits here
           }
           Renderer.update();
           requestAnimationFrame((t) => this.loop(t));
@@ -3394,7 +3519,7 @@
             if (this.day % 30 === 0 && c.mp < 1e6) c.mp += c.fac * 100;
           });
 
-          // AI処理
+          // AI処理を分散 (1フレームにつき2カ国だけ処理)
           const aiBatchSize = 2;
           for (let i = 0; i < aiBatchSize; i++) {
             this.aiIndex = (this.aiIndex + 1) % tags.length;
@@ -3441,7 +3566,7 @@
                 focusProg: 0,
                 completedFocuses: [],
                 faction: null,
-                template: DB.AITemplates.basic_inf,
+                template: DB.AITemplates.basic_inf, // デフォルトは基本歩兵
                 buildingFactory: null,
                 treeType: "GENERIC",
                 peaceTimer: 0,
@@ -3453,61 +3578,165 @@
 
               // === シナリオ設定 ===
 
-              // GUNMA
+              // 1. グンマー帝国 (ドイツ枠)
               if (name.includes("Gunma") || name.includes("群馬")) {
                 c.name = "グンマー帝国";
                 c.flag = "🦅";
-                c.col = "#212121";
+                c.col = "#212121"; // ドイツっぽい黒/グレー
                 c.ideology = "帝国主義";
-                c.mp = 400000;
-                c.fac = 25; // 強力な工業力
+                c.mp = 300000;
+                c.fac = 20;
                 c.treeType = "GUNMA";
-                c.template = DB.AITemplates.tank_div; // 主力は戦車
-              } else if (name.includes("Tochigi") || name.includes("栃木")) {
+                c.template = DB.AITemplates.tank_div; // 初期テンプレートを戦車師団に
+              }
+
+              // 2. 帝政千葉 (イタリア枠)
+              else if (name.includes("Chiba") || name.includes("千葉")) {
+                c.name = "帝政千葉";
+                c.flag = "🥜";
+                c.col = "#2e7d32"; // イタリアっぽい緑
+                c.ideology = "ファシズム";
+                c.fac = 12;
+                c.faction = null;
+              }
+
+              // 3. 栃木・茨城 (ポーランド枠)
+              else if (name.includes("Tochigi") || name.includes("栃木")) {
                 c.name = "栃木共和国";
                 c.flag = "🥟";
-                c.col = "#d81b60";
+                c.col = "#d81b60"; // ポーランド色
                 c.faction = "Kanto_Allies";
-                c.treeType = "GENERIC";
-                c.mp = 20000; // 人的不足
-                c.fac = 3; // 工業力低下
-                c.eq = 100; // 装備不足
+                c.treeType = "GENERIC"; // 汎用だが防御寄りAIにする
               } else if (name.includes("Ibaraki") || name.includes("茨城")) {
                 c.name = "茨城公国";
                 c.flag = "🌾";
                 c.col = "#ad1457";
                 c.faction = "Kanto_Allies";
-                c.mp = 25000;
-                c.fac = 4;
-              } else if (name.includes("Saitama") || name.includes("埼玉")) {
+              }
+
+              // 4. 埼玉 (フランス枠)
+              else if (name.includes("Saitama") || name.includes("埼玉")) {
                 c.name = "埼玉コミューン";
                 c.flag = "🕊️";
-                c.col = "#1565c0";
+                c.col = "#1565c0"; // フランス青
                 c.ideology = "民主主義";
                 c.fac = 15;
                 c.mp = 150000;
                 c.treeType = "SAITAMA";
                 c.faction = "Kanto_Allies";
-                c.st = 30;
-              } else if (name.includes("Tokyo") || name.includes("東京")) {
+                c.st = 30; // 政治的不安定
+              }
+
+              // 5. 東京 (イギリス枠)
+              else if (name.includes("Tokyo") || name.includes("東京")) {
                 c.name = "帝都東京";
                 c.flag = "👑";
-                c.col = "#b71c1c";
+                c.col = "#b71c1c"; // イギリス赤
                 c.ideology = "立憲君主制";
                 c.fac = 25;
                 c.mp = 200000;
                 c.treeType = "TOKYO";
                 c.faction = "Kanto_Allies";
-                c.template = DB.AITemplates.elite_tank;
+                c.template = DB.AITemplates.elite_tank; // エリート戦車師団
+              }
+
+              // 6. 神奈川 (追加：関東連合入り)
+              else if (name.includes("Kanagawa") || name.includes("神奈川")) {
+                c.name = "神奈川自由国";
+                c.flag = "🚢";
+                c.faction = "Kanto_Allies";
+                c.fac = 18;
+                c.col = "#0d47a1";
+              }
+
+              // 7. 北海道 (ソ連枠)
+              else if (name.includes("Hokkaido") || name.includes("北海道")) {
+                c.name = "北海ソビエト";
+                c.flag = "☭";
+                c.col = "#880e4f"; // ソ連の濃い赤
+                c.ideology = "共産主義";
+                c.fac = 30;
+                c.mp = 500000;
+                c.treeType = "HOKKAIDO";
+                c.template = DB.AITemplates.mech_div; // 機械化師団
+              }
+
+              // 8. 東北 (バルト三国枠)
+              else if (
+                [
+                  "Aomori",
+                  "Iwate",
+                  "Akita",
+                  "Miyagi",
+                  "Yamagata",
+                  "Fukushima",
+                ].some((n) => name.includes(n)) ||
+                ["青森", "岩手", "秋田", "宮城", "山形", "福島"].some((n) =>
+                  name.includes(n)
+                )
+              ) {
+                c.treeType = "GENERIC";
+                c.territoryDefBonus = 0.5; // 防御ボーナス特盛
+                c.col = "#546e7a"; // バルトっぽい色
+              }
+
+              // 9. 西日本・四国 (バトロワ)
+              else if (
+                ["Kagawa", "Tokushima", "Ehime", "Kochi"].some((n) =>
+                  name.includes(n)
+                ) ||
+                ["香川", "徳島", "愛媛", "高知"].some((n) => name.includes(n))
+              ) {
+                c.treeType = "GENERIC_WAR"; // 戦争ツリー
+                c.ideology = "群雄割拠";
+              }
+
+              // 10. 九州 (征服狙い)
+              else if (
+                ["Fukuoka", "Kumamoto", "Kagoshima"].some((n) =>
+                  name.includes(n)
+                ) ||
+                ["福岡", "熊本", "鹿児島"].some((n) => name.includes(n))
+              ) {
+                c.name = name.includes("Fukuoka") ? "修羅の国" : c.name;
+                c.treeType = "GENERIC_WAR";
+                c.fac += 5;
+                c.mp += 50000;
+                c.template = DB.AITemplates.bike_div; // 機動力重視の自転車師団
+              }
+
+              // 11. 関西・愛知 (西日本征服)
+              else if (
+                ["Osaka", "Kyoto", "Aichi"].some((n) => name.includes(n)) ||
+                ["大阪", "京都", "愛知"].some((n) => name.includes(n))
+              ) {
+                c.treeType = "GENERIC_WAR";
+                c.fac += 8;
+                c.mp += 100000;
+              }
+
+              // 12. 石川 (北陸征服)
+              else if (name.includes("Ishikawa") || name.includes("石川")) {
+                c.name = "加賀百万石";
+                c.treeType = "GENERIC_WAR";
+                c.fac += 5;
               }
             });
           }
         },
         justifyWar: function () {
           if (this.selected && this.selected !== this.player) {
-            const target = this.selected;
+            const target = this.selected; // ターゲットを変数に保存
             UI.notify(`工作員を派遣中... (${Game.countries[target].name}へ)`);
             setTimeout(() => this.declareWar(this.player, target), 2000);
+          }
+        },
+        justifyWarTarget: function (targetName, myTag) {
+          const targetTag = Object.keys(Game.countries).find((t) =>
+            Game.countries[t].name.includes(targetName)
+          );
+          if (targetTag) {
+            Game.declareWar(myTag, targetTag);
           }
         },
         calcStats: function (tmpl) {
@@ -3559,8 +3788,7 @@
         spawnInitialUnits: function () {
           Object.values(this.countries).forEach((c) => {
             if (c.tag === "_SEA") return;
-            let n = Math.min(20, Math.max(3, ~~(c.fac / 1.5)));
-            if (c.treeType === "GUNMA") n += 10; // グンマーは初期ユニット増量
+            const n = Math.min(20, Math.max(3, ~~(c.fac / 1.5)));
             for (let i = 0; i < n; i++)
               if (c.provs.length) this.spawnUnit(c.tag, c.capital, c.template);
           });
@@ -3600,6 +3828,7 @@
           }
           this.unitGrid.get(hex.id).push(unit);
         },
+
         removeFromGrid: function (unit, hex) {
           if (this.unitGrid.has(hex.id)) {
             const unitsInHex = this.unitGrid.get(hex.id);
@@ -3612,36 +3841,44 @@
             }
           }
         },
+
         getEnemyInHex: function (hex, myTag) {
           if (!this.unitGrid.has(hex.id)) return null;
           const units = this.unitGrid.get(hex.id);
           return units.find((u) => u.tag !== myTag && this.isWar(myTag, u.tag));
         },
+
         updateUnits: function (dt) {
           const moveSpeed = 50;
           const unitMoveFactor = 0.5;
 
           for (let i = this.units.length - 1; i >= 0; i--) {
             const u = this.units[i];
-            if (!u) continue;
             if (!u.el) continue;
 
+            // Supply decay
             u.supply -= 0.05 * dt;
             if (u.supply < 0) u.supply = 0;
 
+            // Organization recovery
             if (u.org < u.maxOrg) {
               u.org += 0.5 * dt;
               if (u.org > u.maxOrg) u.org = u.maxOrg;
             }
 
+            // Remove dead units
             if (u.hp <= 0) {
               this.removeFromGrid(u, u.hex);
               u.el.remove();
               this.units.splice(i, 1);
               Input.selUnits = Input.selUnits.filter((su) => su !== u);
+              if (u.tag === this.player) {
+                UI.notify(`我が軍の師団が壊滅しました！`, "danger");
+              }
               continue;
             }
 
+            // Movement
             if (u.state === "moving" && u.path.length > 0) {
               const nextHex = u.path[0];
               const distToTarget = Math.hypot(nextHex.x - u.x, nextHex.y - u.y);
@@ -3655,16 +3892,25 @@
                 this.removeFromGrid(u, u.hex);
                 u.hex = nextHex;
                 this.addToGrid(u, u.hex);
+
                 u.path.shift();
 
+                // Conquest
                 if (
                   u.hex.owner !== u.tag &&
-                  u.hex.owner !== "_SEA" &&
-                  !this.isAlly(u.tag, u.hex.owner)
+                  !this.isWar(u.tag, u.hex.owner) &&
+                  u.hex.owner !== "_SEA"
                 ) {
                   this.conquerHex(u, u.hex);
+                  if (u.tag === this.player) {
+                    UI.notify(
+                      `${this.countries[u.hex.owner].name} の領土を占領！`,
+                      "success"
+                    );
+                  }
                 }
 
+                // Battle Check
                 const enemyUnits = this.unitGrid
                   .get(u.hex.id)
                   ?.filter(
@@ -3690,18 +3936,27 @@
               }
             }
 
+            // Battle simulation
             const unitsInHex = this.unitGrid.get(u.hex.id);
             if (u.state === "fighting" && unitsInHex && unitsInHex.length > 1) {
               this.battle(u.hex);
-            } else if (u.state === "fighting") {
+            } else if (
+              u.state === "fighting" &&
+              (!unitsInHex ||
+                unitsInHex.filter(
+                  (eu) => eu.tag !== u.tag && this.isWar(u.tag, eu.tag)
+                ).length === 0)
+            ) {
               u.state = "idle";
               u.innerEl.classList.remove("fighting");
             }
 
+            // Apply supply effects
             if (u.supply < 30) {
               u.org -= 1 * dt;
               if (u.org < 0) u.org = 0;
             }
+
             Renderer.updateUnit(u);
           }
         },
@@ -3743,7 +3998,6 @@
               def = 0,
               brk = 0,
               arm = 0,
-              prc = 0,
               org = 0,
               count = 0;
             units.forEach((u) => {
@@ -3752,8 +4006,7 @@
                 ha += u.stats.ha;
                 def += u.stats.def;
                 brk += u.stats.brk;
-                arm = Math.max(arm, u.stats.arm); // 最高装甲を使用
-                prc = Math.max(prc, u.stats.prc); // 最高貫徹を使用
+                arm += u.stats.arm;
                 org += u.org;
                 count++;
               }
@@ -3764,7 +4017,6 @@
               def,
               brk,
               arm,
-              prc,
               org: count > 0 ? org / count : 0,
               count,
             };
@@ -3773,48 +4025,43 @@
           const attStats = getCombinedStats(attackers);
           const defStats = getCombinedStats(defenders);
 
-          // 装甲ボーナスの判定 (HoI4ライク)
-          // 装甲 > 貫徹 なら、攻撃側は被ダメージ半減、与ダメージ増加
-          const armorBonus = attStats.arm > defStats.prc;
+          if (attStats.count === 0 || defStats.count === 0) {
+            unitsInHex.forEach((u) => {
+              u.state = "idle";
+              u.innerEl.classList.remove("fighting");
+            });
+            return;
+          }
 
           let defBonus = 1;
           if (hex.owner === defenderTag) {
             defBonus += this.countries[defenderTag].territoryDefBonus || 0;
           }
 
-          // 組織率による戦闘効率
           const attOrgFactor = Math.max(0.1, attStats.org / 100);
           const defOrgFactor = Math.max(0.1, defStats.org / 100);
 
-          // 攻撃力計算
           let attackPower = attStats.sa * attOrgFactor;
-          if (armorBonus) attackPower *= 1.5; // 装甲ボーナス：攻撃力1.5倍
-
           let defensePower = defStats.def * defOrgFactor * defBonus;
 
-          // ダメージ計算
-          // 守備側へのダメージ
           let guaranteedDmg = Math.max(5, attackPower * 0.2);
           let breakDmg = Math.max(0, attackPower - defensePower) * 0.8;
-          let totalDmgToDef = (guaranteedDmg + breakDmg) * 0.5;
 
-          // 攻撃側への反撃ダメージ
           let counterAttackPower = defStats.sa * defOrgFactor;
           let counterBreakthrough = attStats.brk * attOrgFactor;
           let guaranteedCounterDmg = Math.max(2, counterAttackPower * 0.15);
           let counterBreakDmg =
             Math.max(0, counterAttackPower - counterBreakthrough) * 0.5;
-          let totalDmgToAtt = (guaranteedCounterDmg + counterBreakDmg) * 0.5;
 
-          if (armorBonus) totalDmgToAtt *= 0.5; // 装甲ボーナス：被ダメージ半減
+          const totalDmgToDef = (guaranteedDmg + breakDmg) * 0.5;
+          const totalDmgToAtt = (guaranteedCounterDmg + counterBreakDmg) * 0.5;
 
-          // ダメージ適用
           defenders.forEach((u) => {
             u.org -= totalDmgToDef / defenders.length;
             u.hp -= (totalDmgToDef * 0.1) / defenders.length;
+
             if (u.org <= 0) {
               u.org = 0;
-              // 撤退処理
               const safeHex = u.hex.adj.find(
                 (n) =>
                   n.owner === u.tag &&
@@ -3823,9 +4070,9 @@
               if (safeHex) {
                 u.path = [safeHex];
                 u.state = "moving";
-                u.org = 15;
+                u.org = 10;
               } else {
-                u.hp = 0; // 退路なし
+                u.hp = 0;
               }
             }
           });
@@ -3836,15 +4083,23 @@
             if (u.org < 0) u.org = 0;
           });
 
-          // 戦闘終了判定
+          const remainingAttackers = attackers.filter(
+            (u) => u.hp > 0 && u.state === "fighting"
+          );
           const remainingDefenders = defenders.filter(
             (u) => u.hp > 0 && u.state === "fighting"
           );
-          if (remainingDefenders.length === 0) {
-            // 勝利！即座に制圧
+
+          if (remainingAttackers.length === 0) {
+            defenders.forEach((u) => {
+              if (u.state === "fighting") u.state = "idle";
+              u.innerEl.classList.remove("fighting");
+            });
+          } else if (remainingDefenders.length === 0) {
+            // 【修正】攻撃成功時、直ちに進軍を開始
             attackers.forEach((u) => {
               u.innerEl.classList.remove("fighting");
-              u.path = [hex];
+              u.path = [hex]; // 戦闘していた場所へ移動
               u.state = "moving";
             });
           } else {
@@ -3852,8 +4107,599 @@
             defenders.forEach((u) => u.innerEl.classList.add("fighting"));
           }
         },
-      };
+        recruit: function () {
+          const c = this.countries[this.player];
+          const stats = this.calcStats(c.template);
+          const armySize = this.units.filter(
+            (u) => u.tag === this.player
+          ).length;
+          const maxArmy = Math.min(~~(c.fac * 2.5 + 5), 100);
+          if (armySize >= maxArmy) {
+            UI.notify(`師団上限です (現在:${armySize}/${maxArmy})`, "warn");
+            return;
+          }
+          const actualEqCost = stats.cost;
+          if (c.mp >= 1000 && c.eq >= actualEqCost) {
+            c.mp -= 1000;
+            c.eq -= actualEqCost;
+            if (c.provs.length) {
+              this.spawnUnit(this.player, c.capital, c.template);
+              UI.notify("師団編成完了");
+            }
+          } else {
+            UI.notify(
+              `資源不足 (必要: 人的1000, 装備${actualEqCost.toFixed(0)})`,
+              "warn"
+            );
+          }
+        },
+        buildFactory: function () {
+          const c = this.countries[this.player];
+          if (c.focus) {
+            UI.notify("国家方針実行中は工場を建設できません。", "warn");
+            return;
+          }
+          if (c.buildingFactory) {
+            UI.notify("既に工場を建設中です。", "warn");
+            return;
+          }
+          if (c.pp < 50) {
+            UI.notify("政治力が足りません (50必要)。", "warn");
+            return;
+          }
+          c.pp -= 50;
+          c.buildingFactory = { cost: 10, progress: 0, name: "県営工場建設" };
+          UI.notify("県営工場の建設を開始しました", "success");
+          UI.update();
+        },
 
+        calcSupplyAll: function () {
+          Object.values(this.countries).forEach((c) => {
+            if (c.tag === "_SEA" || c.dead || !c.capital) return;
+            c.supplyMap.clear();
+            const queue = [c.capital];
+            c.supplyMap.add(c.capital.id);
+            const visited = new Set([c.capital.id]);
+            while (queue.length > 0) {
+              const curr = queue.shift();
+              curr.adj.forEach((n) => {
+                if (n.owner === c.tag && !visited.has(n.id)) {
+                  visited.add(n.id);
+                  c.supplyMap.add(n.id);
+                  queue.push(n);
+                }
+              });
+            }
+          });
+          this.units.forEach((u) => {
+            const c = this.countries[u.tag];
+            if (c && c.supplyMap.has(u.hex.id)) {
+              u.supply = 100;
+            }
+          });
+        },
+
+        calcCapitals: function () {
+          Object.values(this.countries).forEach((c) => {
+            if (c.tag === "_SEA") return;
+            if (c.provs.length === 0) {
+              if (c.capIcon) {
+                c.capIcon.remove();
+                c.capIcon = null;
+              }
+              c.capital = null;
+              return;
+            }
+            if (c.capital && c.provs.includes(c.capital)) {
+              if (!c.capIcon) {
+                const t = document.createElementNS(
+                  "http://www.w3.org/2000/svg",
+                  "text"
+                );
+                t.textContent = "★";
+                t.setAttribute("fill", "gold");
+                t.setAttribute(
+                  "style",
+                  "pointer-events:none;font-size:18px;font-weight:bold;text-shadow:0 0 2px #000"
+                );
+                $("game-svg").appendChild(t);
+                c.capIcon = t;
+              }
+              c.capIcon.setAttribute("x", c.capital.x - 9);
+              c.capIcon.setAttribute("y", c.capital.y + 6);
+              return;
+            }
+            let best = c.provs[0];
+            const fixed =
+              CapitalCoords[c.tag] ||
+              (c.name.includes("Tokyo") ? CapitalCoords["P13"] : null);
+            if (fixed) {
+              let minD = Infinity;
+              c.provs.forEach((p) => {
+                const d = (p.lat - fixed.lat) ** 2 + (p.lon - fixed.lon) ** 2;
+                if (d < minD) {
+                  minD = d;
+                  best = p;
+                }
+              });
+            } else {
+              let cx = 0,
+                cy = 0;
+              c.provs.forEach((p) => {
+                cx += p.gx;
+                cy += p.gy;
+              });
+              cx /= c.provs.length;
+              cy /= c.provs.length;
+              let minD = Infinity;
+              c.provs.forEach((p) => {
+                const d = (p.gx - cx) ** 2 + (p.gy - cy) ** 2;
+                if (d < minD) {
+                  minD = d;
+                  best = p;
+                }
+              });
+            }
+            c.capital = best;
+            if (!c.capIcon) {
+              const t = document.createElementNS(
+                "http://www.w3.org/2000/svg",
+                "text"
+              );
+              t.textContent = "★";
+              t.setAttribute("fill", "gold");
+              t.setAttribute(
+                "style",
+                "pointer-events:none;font-size:18px;font-weight:bold;text-shadow:0 0 2px #000"
+              );
+              $("game-svg").appendChild(t);
+              c.capIcon = t;
+            }
+            c.capIcon.setAttribute("x", best.x - 9);
+            c.capIcon.setAttribute("y", best.y + 6);
+          });
+        },
+        conquerHex: function (u, h) {
+          const oldOwner = h.owner;
+          if (oldOwner === u.tag) return;
+          const oc = this.countries[oldOwner];
+          const nc = this.countries[u.tag];
+          if (h.factories > 0) {
+            nc.fac += h.factories;
+            if (oc) oc.fac -= h.factories;
+          }
+          if (oc) oc.provs = oc.provs.filter((x) => x !== h);
+          h.owner = u.tag;
+          h.el.setAttribute("fill", nc.col);
+          nc.provs.push(h);
+          if (oc && oc.capital === h) {
+            UI.notify(`${nc.name} が ${oc.name} の県庁所在地を制圧！`, "war");
+            oc.ws -= 50;
+            if (oc.ws < 20) {
+              this.capitulate(oldOwner, u.tag);
+            } else {
+              this.calcCapitals();
+            }
+          } else {
+            this.calcCapitals();
+          }
+          this.calcSupplyAll();
+        },
+        capitulate: function (loser, winner) {
+          const lc = this.countries[loser];
+          const wc = this.countries[winner];
+          SuperEvent.trigger(
+            "県庁陥落",
+            `${lc.name} 政府が降伏。\n全土は ${wc.name} の県政下に置かれる。`,
+            "ニュース速報",
+            "🏳️",
+            lc.col,
+            "諸行無常。"
+          );
+          [...lc.provs].forEach((p) => {
+            p.owner = winner;
+            p.el.setAttribute("fill", wc.col);
+            wc.provs.push(p);
+            wc.fac += p.factories;
+          });
+          lc.fac = 0;
+          lc.provs = [];
+          lc.dead = true;
+          this.units = this.units.filter((u) => u.tag !== loser);
+          document.querySelectorAll(".unit-grp").forEach((el) => {
+            const uObj = this.units.find((x) => x.el === el);
+            if (!uObj) el.remove();
+          });
+          this.unitGrid.forEach((v, k) => {
+            this.unitGrid.set(
+              k,
+              v.filter((u) => u.tag !== loser)
+            );
+          });
+          this.wars = this.wars.filter(
+            (w) => w.atk !== loser && w.def !== loser
+          );
+          this.calcCapitals();
+          this.calcSupplyAll();
+        },
+        declareWar: function (a, b) {
+          if (this.isWar(a, b) || this.isAlly(a, b)) return;
+          this.wars.push({ atk: a, def: b });
+          this.tension += 2;
+          if (this.countries[a]) this.countries[a].peaceTimer = 0;
+          if (this.countries[b]) this.countries[b].peaceTimer = 0;
+
+          const isPlayerInvolved = a === this.player || b === this.player;
+          const isMajorWar =
+            this.countries[a].fac >= 10 && this.countries[b].fac >= 10;
+
+          if (isPlayerInvolved || isMajorWar) {
+            UI.notify(
+              `${this.countries[a].name} が ${this.countries[b].name} に宣戦布告！`,
+              "war"
+            );
+          }
+
+          if (
+            this.tension > 80 &&
+            this.day - this.lastSuperEventDay > 365 &&
+            (isPlayerInvolved || isMajorWar)
+          ) {
+            const enemy = a === this.player ? b : a;
+            const cName = this.countries[enemy].name;
+            const title = "戦国時代 勃発";
+            const quote =
+              "サイは投げられた。\n平和憲法は過去のものとなり、列島は再び炎に包まれる。";
+            SuperEvent.trigger(
+              title,
+              quote,
+              `${cName} 県知事声明`,
+              "⚔️",
+              "#200",
+              "いざ、出陣。"
+            );
+            this.lastSuperEventDay = this.day;
+          }
+
+          if (Game.selected === b) UI.updateSidebar();
+        },
+        isWar: function (a, b) {
+          return this.wars.some(
+            (w) => (w.atk === a && w.def === b) || (w.atk === b && w.def === a)
+          );
+        },
+        isAlly: function (tag1, tag2) {
+          if (!this.countries[tag1] || !this.countries[tag2]) return false;
+          const f1 = this.countries[tag1].faction;
+          const f2 = this.countries[tag2].faction;
+          return f1 && f2 && f1 === f2;
+        },
+        getAliveCountryCount: function () {
+          return Object.keys(this.countries).filter(
+            (k) => k !== "_SEA" && !this.countries[k].dead
+          ).length;
+        },
+        startFocus: function (fid) {
+          const c = this.countries[this.player];
+          if (c.buildingFactory) {
+            UI.notify("建設中は県政方針を開始できません。", "warn");
+            return;
+          }
+          const tree = DB.FocusTree[c.treeType] || DB.FocusTree.GENERIC;
+          const f = tree.find((x) => x.id === fid);
+          if (f && c.pp >= f.cost) {
+            c.focus = f;
+            c.focusProg = 0;
+            UI.updateFocusModal();
+          }
+        },
+        completeFocus: function (c) {
+          c.focus.eff(c);
+          c.completedFocuses.push(c.focus.id);
+          if (c.tag === this.player) {
+            UI.notify(`${c.focus.t} 完了`, "success");
+            UI.closeFocusTree();
+          }
+          c.focus = null;
+        },
+        setSpeed: function (s) {
+          this.speed = s;
+          this.running = s > 0;
+          document
+            .querySelectorAll(".spd-btn")
+            .forEach((b, i) =>
+              b.classList.toggle("active", [0, 1, 3, 5].indexOf(s) === i)
+            );
+        },
+        getNeighbors: function (tag) {
+          const c = this.countries[tag];
+          if (!c) return [];
+          const neighbors = new Set();
+          c.provs.forEach((p) => {
+            p.adj.forEach((a) => {
+              if (a.owner !== "_SEA" && a.owner !== tag) neighbors.add(a.owner);
+            });
+          });
+          return Array.from(neighbors);
+        },
+        getFrontlineHexes: function (tag) {
+          const c = this.countries[tag];
+          if (!c) return [];
+          return c.provs.filter((p) =>
+            p.adj.some(
+              (a) =>
+                a.owner !== "_SEA" &&
+                a.owner !== tag &&
+                this.isWar(tag, a.owner)
+            )
+          );
+        },
+        initMap: function () {
+          const svg = document.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "svg"
+          );
+          svg.id = "game-svg";
+          svg.setAttribute("width", "100%");
+          svg.setAttribute("height", "100%");
+          svg.setAttribute("overflow", "visible");
+          svg.style.transformOrigin = "0 0";
+          svg.style.willChange = "transform";
+          const defs = document.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "defs"
+          );
+          defs.innerHTML =
+            '<filter id="glow"><feGaussianBlur stdDeviation="2" result="coloredBlur"/><feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>';
+          svg.appendChild(defs);
+          Input.mapWrapEl.appendChild(svg);
+
+          let minX = Infinity,
+            minY = Infinity,
+            maxX = -Infinity,
+            maxY = -Infinity;
+          this.geoData.features.forEach((f) => {
+            f.geometry.coordinates.forEach((poly) => {
+              const rings = f.geometry.type === "MultiPolygon" ? poly : [poly];
+              rings.forEach((ring) => {
+                const arr = f.geometry.type === "MultiPolygon" ? ring : rings;
+                const points = Array.isArray(arr[0][0]) ? arr.flat() : arr;
+                points.forEach((p) => {
+                  const x = p[0];
+                  const y = p[1];
+                  if (x < minX) minX = x;
+                  if (x > maxX) maxX = x;
+                  if (y < minY) minY = y;
+                  if (y > maxY) maxY = y;
+                });
+              });
+            });
+          });
+          minX -= 1;
+          maxX += 1;
+          minY -= 1;
+          maxY += 1;
+          const mapScale = 120;
+          const R = 22;
+          const mapPixelWidth = (maxX - minX) * mapScale * 1.5;
+          const mapPixelHeight = (maxY - minY) * mapScale * 1.8;
+          const cols = Math.ceil(mapPixelWidth / (R * 1.5));
+          const rows = Math.ceil(mapPixelHeight / (R * 1.732));
+
+          MapSys.hexes = [];
+          const isInside = (point, vs) => {
+            let x = point[0],
+              y = point[1];
+            let inside = false;
+            for (let i = 0, j = vs.length - 1; i < vs.length; j = i++) {
+              let xi = vs[i][0],
+                yi = vs[i][1];
+              let xj = vs[j][0],
+                yj = vs[j][1];
+              let intersect =
+                yi > y != yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi;
+              if (intersect) inside = !inside;
+            }
+            return inside;
+          };
+
+          const featureBBoxes = this.geoData.features.map((f) => {
+            let minLon = Infinity,
+              minLat = Infinity,
+              maxLon = -Infinity,
+              maxLat = -Infinity;
+            const processCoords = (coords) => {
+              coords.forEach((p) => {
+                const lon = p[0];
+                const lat = p[1];
+                minLon = Math.min(minLon, lon);
+                minLat = Math.min(minLat, lat);
+                maxLon = Math.max(maxLon, lon);
+                maxLat = Math.max(maxLat, lat);
+              });
+            };
+
+            const polyType = f.geometry.type;
+            const coords = f.geometry.coordinates;
+            if (polyType === "Polygon") {
+              coords.forEach((ring) => processCoords(ring));
+            } else if (polyType === "MultiPolygon") {
+              coords.forEach((poly) =>
+                poly.forEach((ring) => processCoords(ring))
+              );
+            }
+            return { feature: f, bbox: { minLon, minLat, maxLon, maxLat } };
+          });
+
+          for (let gy = 0; gy < rows; gy++) {
+            for (let gx = 0; gx < cols; gx++) {
+              const x = gx * R * 1.5 + 25;
+              const y = gy * R * 1.732 + 25 + (gx % 2 ? R * 0.866 : 0);
+              const lon = x / (mapScale * 1.5) + minX;
+              const lat = maxY - y / (mapScale * 1.8);
+              let owner = "_SEA";
+
+              for (const fb of featureBBoxes) {
+                const bbox = fb.bbox;
+                if (
+                  lon >= bbox.minLon &&
+                  lon <= bbox.maxLon &&
+                  lat >= bbox.minLat &&
+                  lat <= bbox.maxLat
+                ) {
+                  let inside = false;
+                  const f = fb.feature;
+                  const props = f.properties;
+                  const polyType = f.geometry.type;
+                  const coords = f.geometry.coordinates;
+                  if (polyType === "Polygon") {
+                    coords.forEach((ring) => {
+                      if (isInside([lon, lat], ring)) inside = true;
+                    });
+                  } else if (polyType === "MultiPolygon") {
+                    coords.forEach((poly) => {
+                      poly.forEach((ring) => {
+                        if (isInside([lon, lat], ring)) inside = true;
+                      });
+                    });
+                  }
+                  if (inside) {
+                    const name = props.nam_ja || props.nam;
+                    const id = props.id
+                      ? "P" + props.id
+                      : name.replace(/[^a-zA-Z0-9]/g, "");
+                    owner = id;
+                    break;
+                  }
+                }
+              }
+
+              const hexEl = document.createElementNS(
+                "http://www.w3.org/2000/svg",
+                "polygon"
+              );
+              const points = [];
+              for (let i = 0; i < 6; i++) {
+                const angle = (Math.PI / 3) * i;
+                points.push(
+                  `${x + R * Math.cos(angle)},${y + R * Math.sin(angle)}`
+                );
+              }
+              hexEl.setAttribute("points", points.join(" "));
+              hexEl.setAttribute("class", owner === "_SEA" ? "hex sea" : "hex");
+              hexEl.dataset.id = MapSys.hexes.length;
+
+              if (owner !== "_SEA") {
+                const c = this.countries[owner];
+                if (c) {
+                  hexEl.setAttribute("fill", c.col);
+                  this.countries[owner].provs.push({
+                    id: MapSys.hexes.length,
+                    gx,
+                    gy,
+                    x,
+                    y,
+                    lon,
+                    lat,
+                    el: hexEl,
+                    adj: [],
+                    owner: owner,
+                    type: "plains",
+                    factories: 0,
+                  });
+                  const h =
+                    this.countries[owner].provs[
+                      this.countries[owner].provs.length - 1
+                    ];
+                  MapSys.hexes.push(h);
+                  svg.appendChild(hexEl);
+                  if (Math.random() < 0.05) {
+                    h.factories = 1;
+                    c.fac++;
+                  }
+                }
+              } else {
+                svg.appendChild(hexEl);
+                MapSys.hexes.push({
+                  id: MapSys.hexes.length,
+                  gx,
+                  gy,
+                  x,
+                  y,
+                  lon,
+                  lat,
+                  el: hexEl,
+                  adj: [],
+                  owner: "_SEA",
+                  type: "sea",
+                  factories: 0,
+                });
+              }
+            }
+          }
+          const gridMap = {};
+          MapSys.hexes.forEach((h) => (gridMap[`${h.gx},${h.gy}`] = h));
+          MapSys.hexes.forEach((a) => {
+            const isOdd = a.gx % 2 === 1;
+            const offsets = isOdd
+              ? [
+                  [0, -1],
+                  [0, 1],
+                  [-1, 0],
+                  [-1, 1],
+                  [1, 0],
+                  [1, 1],
+                ]
+              : [
+                  [0, -1],
+                  [0, 1],
+                  [-1, -1],
+                  [-1, 0],
+                  [1, -1],
+                  [1, 0],
+                ];
+            offsets.forEach((o) => {
+              const k = `${a.gx + o[0]},${a.gy + o[1]}`;
+              if (gridMap[k]) a.adj.push(gridMap[k]);
+            });
+          });
+          Renderer.layer = document.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "g"
+          );
+          svg.appendChild(Renderer.layer);
+          Renderer.uiLayer = document.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "g"
+          );
+          svg.appendChild(Renderer.uiLayer);
+
+          if (!document.getElementById("arrowhead")) {
+            const defs = $("game-svg").querySelector("defs");
+            const marker = document.createElementNS(
+              "http://www.w3.org/2000/svg",
+              "marker"
+            );
+            marker.setAttribute("id", "arrowhead");
+            marker.setAttribute("markerWidth", "10");
+            marker.setAttribute("markerHeight", "7");
+            marker.setAttribute("refX", "9");
+            marker.setAttribute("refY", "3.5");
+            marker.setAttribute("orient", "auto");
+            marker.innerHTML =
+              '<polygon points="0 0, 10 3.5, 0 7" fill="#ffca28" />';
+            defs.appendChild(marker);
+          }
+
+          this.calcCapitals();
+          Renderer.s = 0.6;
+          const screenCX = Input.mapWrapEl.offsetWidth / 2;
+          const screenCY = Input.mapWrapEl.offsetHeight / 2;
+          Renderer.x = screenCX - 800 * Renderer.s;
+          Renderer.y = screenCY - 600 * Renderer.s;
+          Renderer.update();
+        },
+      };
       const AI = {
         runCountry: function (tag) {
           const c = Game.countries[tag];
