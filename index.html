@@ -4724,7 +4724,7 @@
           const c = Game.countries[tag];
           if (!c || c.provs.length === 0 || c.dead) return;
 
-          // 1. 内政 (変更なし)
+          // 1. 内政 (既存のまま: ランダムでFocus選択)
           if (!c.focus && !c.buildingFactory) {
             const tree = DB.FocusTree[c.treeType] || DB.FocusTree.GENERIC;
             const available = tree.filter(
@@ -4746,7 +4746,7 @@
             }
           }
 
-          // 2. 徴兵 (変更なし)
+          // 2. 徴兵 (既存のまま: 人的・装備があれば生産)
           const myUnits = Game.units.filter((u) => u.tag === tag);
           const armyLimit = 40 + Math.floor(c.fac / 2);
           const enemies = Game.wars
@@ -4769,109 +4769,175 @@
             }
           }
 
-          // 3. 戦略AI (修正版: 遠距離移動の実装)
-          const isBlitzCountry = c.treeType === "GUNMA";
-
-          let actions = 0;
-          const maxActions = 10; // 1ターンに命令を出すユニット数制限（負荷軽減）
-
-          // 敵国のタグを取得
-          const targetTags = Game.wars
-            .filter((w) => w.atk === tag || w.def === tag)
-            .map((w) => (w.atk === tag ? w.def : w.atk));
-
-          // ターゲットとなるヘックス候補を取得（敵国の首都または領土）
-          let targetHexCandidates = [];
-          targetTags.forEach((tTag) => {
-            const enemyC = Game.countries[tTag];
-            if (enemyC && !enemyC.dead) {
-              if (enemyC.capital) targetHexCandidates.push(enemyC.capital);
-              if (enemyC.provs.length > 0)
-                targetHexCandidates.push(
-                  enemyC.provs[Math.floor(Math.random() * enemyC.provs.length)]
-                );
+          // 3. 戦略AI (★完全平押しロジック★)
+          if (enemies.length === 0) {
+            // --- 平時の宣戦布告ロジック ---
+            if (myUnits.length > 10 && c.treeType === "GUNMA") {
+              const neighbors = Game.getNeighbors(tag);
+              const tree = DB.FocusTree[c.treeType];
+              const isFocusTreeDone =
+                c.completedFocuses.length >= tree.length * 0.5;
+              if (
+                isFocusTreeDone &&
+                neighbors.length > 0 &&
+                c.peaceTimer > 80 &&
+                Math.random() < 0.05
+              ) {
+                const target =
+                  neighbors[Math.floor(Math.random() * neighbors.length)];
+                if (!Game.isAlly(tag, target)) {
+                  setTimeout(() => Game.declareWar(tag, target), 1000);
+                }
+              }
             }
+            return;
+          }
+
+          // --- 戦線の解析 ---
+          // A. 攻撃ライン: 自国と接している敵の領土
+          // B. 防衛ライン: 敵と接している自国の領土
+          let attackLine = [];
+          let defenseLine = [];
+          const knownFronts = new Set(); // 重複防止用
+
+          c.provs.forEach((p) => {
+            let isFront = false;
+            p.adj.forEach((n) => {
+              if (enemies.includes(n.owner)) {
+                isFront = true;
+                if (!knownFronts.has(n.id)) {
+                  attackLine.push(n);
+                  knownFronts.add(n.id);
+                }
+              }
+            });
+            if (isFront) defenseLine.push(p);
           });
 
-          // ユニットごとの思考ルーチン
-          // ランダムに並び替えて、毎回同じユニットばかり動かないようにする
+          // もし隣接敵がいない（飛び地や遠征）なら、敵全土をターゲット候補にする
+          if (attackLine.length === 0) {
+            enemies.forEach((eTag) => {
+              const ec = Game.countries[eTag];
+              if (ec && !ec.dead) {
+                // 全部追加すると重いのでランダムに抽出
+                const rndProvs = ec.provs
+                  .sort(() => 0.5 - Math.random())
+                  .slice(0, 10);
+                rndProvs.forEach((p) => attackLine.push(p));
+              }
+            });
+          }
+
+          // --- ユニットへの命令 ---
+          // 処理負荷軽減のため、1ターンに命令を出す数を制限するが、
+          // 平押し感を出すために少し多めに動かす
+          let actions = 0;
+          const maxActions = 20;
+
+          // ユニットをランダム順にして、前線の偏りを防ぐ
           const shuffledUnits = myUnits.sort(() => 0.5 - Math.random());
+
+          // 「現在そのヘックスに向かっている/いる味方の数」を管理し、過剰集中を防ぐ
+          const hexCrowd = new Map();
+
+          // 既に移動中のユニットをカウント
+          myUnits.forEach((u) => {
+            if (u.state === "moving" && u.path.length > 0) {
+              const dest = u.path[u.path.length - 1];
+              hexCrowd.set(dest.id, (hexCrowd.get(dest.id) || 0) + 1);
+            } else {
+              hexCrowd.set(u.hex.id, (hexCrowd.get(u.hex.id) || 0) + 1);
+            }
+          });
 
           for (const u of shuffledUnits) {
             if (actions >= maxActions) break;
             if (u.state === "moving" && u.path.length > 0) continue; // 移動中は放置
 
             const neighbors = u.hex.adj;
-            const enemyNeighbors = neighbors.filter(
-              (n) =>
-                n.owner !== tag &&
-                n.owner !== "_SEA" &&
-                Game.isWar(tag, n.owner)
+            const enemyNeighbors = neighbors.filter((n) =>
+              enemies.includes(n.owner)
             );
 
-            // --- A. 接敵している場合 (攻撃) ---
-            if (enemyNeighbors.length > 0) {
-              // 組織率がある程度あれば攻撃
-              if (u.org > 20) {
-                u.path = [
-                  enemyNeighbors[
-                    Math.floor(Math.random() * enemyNeighbors.length)
-                  ],
-                ];
-                u.state = "moving";
-                actions++;
-              }
-              continue;
-            }
-
-            // --- B. 接敵していない場合 (前線への移動) ---
-            // ターゲット（敵国）が存在し、かつ自分が待機中であれば移動経路を探す
-            if (targetTags.length > 0 && u.state === "idle") {
-              // 最も近いターゲットを探す
+            // === パターンA: 接敵している (Frontline Combat) ===
+            // 目の前に敵がいるなら、基本的に攻撃する。
+            // ただし、1箇所に全員で突撃せず、手薄な敵ヘックスを優先する。
+            if (enemyNeighbors.length > 0 && u.org > 15) {
+              // 攻撃候補の中で、味方の割り当てが一番少ない場所を探す
               let bestTarget = null;
-              let minDist = 999999;
+              let minCrowd = 9999;
 
-              for (const tHex of targetHexCandidates) {
-                const d = (u.x - tHex.x) ** 2 + (u.y - tHex.y) ** 2;
-                if (d < minDist) {
-                  minDist = d;
-                  bestTarget = tHex;
+              // ランダム性を入れて「面」で当たるようにする
+              const candidates = enemyNeighbors.sort(() => 0.5 - Math.random());
+
+              for (const t of candidates) {
+                const count = hexCrowd.get(t.id) || 0;
+                // 1ヘックスあたり3師団くらいまでなら突っ込む
+                if (count < minCrowd && count < 3) {
+                  minCrowd = count;
+                  bestTarget = t;
                 }
               }
 
               if (bestTarget) {
-                // プレイヤー用の経路探索関数(Input.findPath)を流用して経路を計算
-                // maxSearchを少し小さめにして負荷対策
-                const path = Input.findPath(u.hex, bestTarget, tag, 500);
-                if (path && path.length > 0) {
-                  u.path = path;
-                  u.state = "moving";
-                  actions++;
-                }
+                u.path = [bestTarget];
+                u.state = "moving";
+                hexCrowd.set(
+                  bestTarget.id,
+                  (hexCrowd.get(bestTarget.id) || 0) + 1
+                );
+                actions++;
+                continue;
               }
             }
-          }
 
-          // 宣戦布告ロジック (変更なし)
-          if (
-            enemies.length === 0 &&
-            myUnits.length > 10 &&
-            c.treeType === "GUNMA"
-          ) {
-            const neighbors = Game.getNeighbors(tag);
-            const tree = DB.FocusTree[c.treeType];
-            const isFocusTreeDone =
-              c.completedFocuses.length >= tree.length * 0.5;
-            if (
-              isFocusTreeDone &&
-              neighbors.length > 0 &&
-              c.peaceTimer > 100 &&
-              Math.random() < 0.1
-            ) {
-              const target =
-                neighbors[Math.floor(Math.random() * neighbors.length)];
-              if (!Game.isAlly(tag, target)) {
-                setTimeout(() => Game.declareWar(tag, target), 1000);
+            // === パターンB: 接敵していない (Fill the Gap) ===
+            // 前線（defenseLine）または敵地（attackLine）の中で、
+            // 「味方が最も少ない場所」に向かって移動する。
+            // これにより、穴が開いた場所に自動的に後続が流れ込む。
+            if (u.state === "idle") {
+              const targets = defenseLine.length > 0 ? defenseLine : attackLine;
+
+              if (targets.length > 0) {
+                let bestDest = null;
+                let bestScore = -Infinity;
+
+                // パフォーマンスのため候補を絞る
+                const sampleTargets = targets
+                  .sort(() => 0.5 - Math.random())
+                  .slice(0, 15);
+
+                for (const t of sampleTargets) {
+                  const dist = (u.x - t.x) ** 2 + (u.y - t.y) ** 2;
+                  const crowd = hexCrowd.get(t.id) || 0;
+
+                  // スコア計算:
+                  // 1. 距離が近いほど良い (移動時間短縮)
+                  // 2. 味方が少ないほど良い (穴埋め優先)
+                  // 平押しのため、「味方の少なさ」の重みを大きくする
+                  const score = -(dist / 5000) - crowd * 10;
+
+                  if (score > bestScore) {
+                    bestScore = score;
+                    bestDest = t;
+                  }
+                }
+
+                if (bestDest) {
+                  // 少し探索範囲を広げて経路を探す
+                  const path = Input.findPath(u.hex, bestDest, tag, 600);
+                  if (path && path.length > 0) {
+                    u.path = path;
+                    u.state = "moving";
+                    // 移動先でのカウントを増やす
+                    const finalHex = path[path.length - 1];
+                    hexCrowd.set(
+                      finalHex.id,
+                      (hexCrowd.get(finalHex.id) || 0) + 1
+                    );
+                    actions++;
+                  }
+                }
               }
             }
           }
