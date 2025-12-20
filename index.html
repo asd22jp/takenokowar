@@ -3895,12 +3895,8 @@
 
                 u.path.shift();
 
-                // Conquest
-                if (
-                  u.hex.owner !== u.tag &&
-                  !this.isWar(u.tag, u.hex.owner) &&
-                  u.hex.owner !== "_SEA"
-                ) {
+                // Conquest (戦争中かどうかにかかわらず、他国領なら占領)
+                if (u.hex.owner !== u.tag && u.hex.owner !== "_SEA") {
                   this.conquerHex(u, u.hex);
                   if (u.tag === this.player) {
                     UI.notify(
