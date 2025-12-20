@@ -4769,30 +4769,53 @@
             }
           }
 
-          // 3. 戦略AI (★完全平押しロジック★)
+          // 3. 戦略AI (★完全平押しロジック + 2060年暴走モード★)
           if (enemies.length === 0) {
             // --- 平時の宣戦布告ロジック ---
-            if (myUnits.length > 10 && c.treeType === "GUNMA") {
+
+            // 現在の年を取得
+            const currentDate = new Date(2025, 3, 1 + Game.day);
+            const currentYear = currentDate.getFullYear();
+
+            // 「国家方針がない」＝汎用ツリー (GENERIC または GENERIC_WAR) と判定
+            const isGeneric = c.treeType.startsWith("GENERIC");
+
+            // 宣戦布告が解禁される条件:
+            // 1. グンマー帝国 (最初から好戦的)
+            // 2. 汎用国家 かつ 2060年以降 (世紀末モード)
+            const isAggressor =
+              c.treeType === "GUNMA" || (isGeneric && currentYear >= 2060);
+
+            if (myUnits.length > 5 && isAggressor) {
               const neighbors = Game.getNeighbors(tag);
-              const tree = DB.FocusTree[c.treeType];
-              const isFocusTreeDone =
+
+              // 2060年以降は平和タイマーの制限を極端に短くする (30日)
+              // 通常は80日待つ
+              const waitDays = currentYear >= 2060 ? 30 : 80;
+
+              // 固有ツリー持ちは進行度チェックをするが、2060年暴走勢は無視して殴る
+              const tree = DB.FocusTree[c.treeType] || [];
+              const isReady =
+                currentYear >= 2060 ||
                 c.completedFocuses.length >= tree.length * 0.5;
+
               if (
-                isFocusTreeDone &&
+                isReady &&
                 neighbors.length > 0 &&
-                c.peaceTimer > 80 &&
+                c.peaceTimer > waitDays &&
                 Math.random() < 0.05
               ) {
                 const target =
                   neighbors[Math.floor(Math.random() * neighbors.length)];
+                // 味方でなければ宣戦布告
                 if (!Game.isAlly(tag, target)) {
+                  // 2060年以降なら警告なしで即座に殴りかかることもあり得るが、一応1秒待つ
                   setTimeout(() => Game.declareWar(tag, target), 1000);
                 }
               }
             }
             return;
           }
-
           // --- 戦線の解析 ---
           // A. 攻撃ライン: 自国と接している敵の領土
           // B. 防衛ライン: 敵と接している自国の領土
